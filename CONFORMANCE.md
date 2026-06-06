@@ -4,6 +4,14 @@ A conformant implementation of the Credential Delegation Protocol MUST satisfy t
 
 ## Delegation Server (DS)
 
+### Protocol Version Negotiation
+- MUST set `Cred-Protocol-Version` on every protocol response
+- MUST maintain a supported-version set and a configured version floor
+- MUST reject explicit protocol versions below the configured floor
+- MUST reject explicit protocol versions outside the supported-version set
+- MUST return HTTP 426 with `error: protocol_version_unsupported` for unsupported versions
+- MAY treat a missing protocol-version header as `0.1.0` only while the configured floor is `0.1.0`
+
 ### Agent Authentication
 - MUST accept JWT Bearer assertions [RFC 7523] signed with Ed25519 or P-256 keys
 - MUST NOT reject a did:key it has not seen before (no pre-registration required)
@@ -41,6 +49,12 @@ A conformant implementation of the Credential Delegation Protocol MUST satisfy t
 - Log entries MUST be tamper-evident (e.g., HMAC chain or append-only storage)
 
 ## Agent (Client)
+
+### Protocol Version Negotiation
+- MUST send `Cred-Protocol-Version` on protocol requests
+- MUST reject a response that selects a version below the client's configured floor
+- MUST reject a response that selects a version outside the client's supported-version set
+- MUST surface `protocol_version_unsupported` distinctly from authentication, authorization, and policy failures
 
 ### Identity
 - MUST generate an ephemeral Ed25519 or P-256 key pair at instantiation
