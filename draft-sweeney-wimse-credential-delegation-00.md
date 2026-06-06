@@ -146,6 +146,50 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 **Critical architectural property:** The Agent's trust boundary extends only to the network interface of the Delegation Server. The Agent never crosses into the Vault. This eliminates credential theft as an attack surface — there is nothing for a compromised agent to exfiltrate.
 
+### 3.1 Protocol Version Negotiation
+
+The canonical protocol version for this draft is `0.1.0`.
+
+HTTP protocol clients MUST advertise the highest Cred Protocol version they
+support for a request using the `Cred-Protocol-Version` request header. The
+header value MUST be a single semantic-version string in `MAJOR.MINOR.PATCH`
+form. Delegation Servers MUST set `Cred-Protocol-Version` on every protocol
+response, including error responses, to the version selected by the server for
+that response.
+
+Each implementation MUST maintain:
+
+- a supported-version set, ordered from newest to oldest
+- a configured version floor, below which requests are rejected
+
+For this draft, the supported-version set is `["0.1.0"]` and the default version
+floor is `0.1.0`.
+
+A Delegation Server MUST reject a request that advertises a version lower than
+the configured floor or a version outside the supported-version set. The server
+MUST return HTTP 426 with a JSON body containing:
+
+```json
+{
+  "error": "protocol_version_unsupported",
+  "message": "Cred Protocol version 0.0.9 is not supported",
+  "requested_version": "0.0.9",
+  "supported_versions": ["0.1.0"],
+  "minimum_version": "0.1.0",
+  "current_version": "0.1.0"
+}
+```
+
+The response MUST also include `Cred-Protocol-Version` set to the server's
+current version so clients can distinguish protocol drift from authentication,
+authorization, or policy failures.
+
+During the `0.1.0` compatibility window, a missing `Cred-Protocol-Version`
+request header MAY be treated as `0.1.0`. This allowance exists only because
+there is no earlier wire version to downgrade to. Implementations that raise the
+version floor above `0.1.0` MUST reject missing protocol-version headers with
+`protocol_version_unsupported`.
+
 ---
 
 ## 4. Agent Identity
