@@ -9,7 +9,7 @@
 
 ## Abstract
 
-Autonomous AI agents increasingly require access to protected resources across multiple service providers on behalf of human users. Existing OAuth 2.0 extensions address individual aspects of this problem — token exchange, proof-of-possession, and structured authorization — but no current specification defines how these mechanisms compose into a coherent credential delegation framework for AI agents.
+Autonomous AI agents increasingly require access to protected resources across multiple service providers on behalf of human users. Existing OAuth 2.0 extensions address individual aspects of this problem (token exchange, proof-of-possession, and structured authorization) but no current specification defines how these mechanisms compose into a coherent credential delegation framework for AI agents.
 
 This document specifies the Credential Delegation Protocol: a profile of OAuth 2.0 Token Exchange [RFC8693], Demonstrating Proof-of-Possession [RFC9449], Rich Authorization Requests [RFC9396], and Client-Initiated Backchannel Authentication [OIDC-CIBA] that enables human users to delegate scoped, attenuated credentials to AI agents operating across heterogeneous service providers.
 
@@ -25,11 +25,11 @@ This document does not define new token formats, new OAuth grant types, or modif
 
 OAuth 2.0 [RFC6749] solved human-to-service authorization. When a user authorizes an application to act on their behalf, the application receives an access token representing that delegation. This model assumes a human present at a browser for the consent ceremony.
 
-AI agents operate autonomously. They are ephemeral (spawned on demand), numerous (many agents per user per service), and adversarially promptable — a compromised prompt can direct an agent to misuse any credential it holds. Existing standards fail the agent delegation use case in seven specific ways:
+AI agents operate autonomously. They are ephemeral (spawned on demand), numerous (many agents per user per service), and adversarially promptable: a compromised prompt can direct an agent to misuse any credential it holds. Existing standards fail the agent delegation use case in seven specific ways:
 
 **1. No agent identity primitive.** OAuth clients require pre-registration. Agents are ephemeral and cannot register at instantiation time. SPIFFE requires admin provisioning. No standard defines bootstrapping an agent identity from nothing.
 
-**2. No delegation chain attenuation.** When Agent A sub-delegates to Agent B, existing standards do not enforce that authority can only narrow. RFC 8693 records delegation chains via nested `act` claims but treats them as "informational only" — no enforcement, no structural guarantee. The delegation chain splicing vulnerability (disclosed to the OAuth WG mailing list, February 26, 2026 [OAUTH-SPLICING]) demonstrates that RFC 8693 §2.1-2.2 permits a compromised intermediary to present mismatched `subject_token` and `actor_token` from different delegation contexts, producing a properly-signed token asserting a delegation chain that never occurred. [OAUTH-OBO] is an emerging OAuth WG response to the same disclosure, addressed at the single authorization-code-to-access-token exchange step (Section 1.2, Section 9.2); it does not address multi-hop sub-delegation chains, which remain this document's focus.
+**2. No delegation chain attenuation.** When Agent A sub-delegates to Agent B, existing standards do not enforce that authority can only narrow. RFC 8693 records delegation chains via nested `act` claims but treats them as "informational only", with no enforcement and no structural guarantee. The delegation chain splicing vulnerability (disclosed to the OAuth WG mailing list, February 26, 2026 [OAUTH-SPLICING]) demonstrates that RFC 8693 §2.1-2.2 permits a compromised intermediary to present mismatched `subject_token` and `actor_token` from different delegation contexts, producing a properly-signed token asserting a delegation chain that never occurred.
 
 **3. No credential wrapping.** Agents need to use credentials at resource servers that do not understand delegation. No standard defines how a delegation token authorizes credential exercise without exposing the raw credential to the agent.
 
@@ -45,21 +45,49 @@ This document profiles existing standards to address all seven gaps.
 
 ### 1.2 Relationship to Existing Work
 
-**draft-klrc-aiagent-auth** (Kasselman, Lombardo, Rosomakho, Campbell, Steele; latest revision -02, June 2026): Provides a comprehensive framework for AI agent authentication and authorization. This document provides the concrete credential delegation protocol mechanics that the framework identifies as needed but delegates to "use OAuth flows" (Authorization Code Grant per [RFC6749] Section 4.1). This specification is designed as a companion to that work, not a replacement.
+The IETF landscape for agent authorization moved quickly during 2026. The OAuth Working Group was rechartered in June 2026 with agents acting on behalf of users explicitly in scope. The WIMSE Working Group held an interim meeting on June 3, 2026 dedicated to AI agent authentication and authorization and is discussing adoption of that work. Several dozen individual drafts now address some slice of agent identity or delegation. This section positions this protocol against the working group documents and the individual drafts closest to its mechanics. It is not a survey.
 
-**draft-oauth-ai-agents-on-behalf-of-user** (OAuth WG, latest revision -02): An emerging OAuth WG extension that introduces a `requested_actor` authorization parameter and an `actor_token` token-request parameter to bind an AI agent into the authorization-code-to-access-token exchange, directly responding to the same delegation chain splicing disclosure this document cites in Section 1.1(2) and Section 9.2. It addresses a narrower problem than this specification — a single OAuth client obtaining one actor-bound access token — and does not define multi-hop sub-delegation, credential wrapping, or cascading revocation. This document should track that draft's claim/parameter naming where the two overlap (see Section 9.2).
+#### 1.2.1 Frameworks and Working Group Documents
 
-**draft-ni-wimse-ai-agent-identity-02** (Ni, Liu, Huawei, February 2026): Addresses agent identity within WIMSE. This protocol's agent identity model (did:key) is compatible with WIMSE workload identity. This document adds credential wrapping, real-time revocation, consent gating, and multi-hop chain verification.
+**draft-klrc-aiagent-auth** [KLRC-AIAGENT]: A framework for AI agent authentication and authorization, at -02 with -03 in preparation, and the subject of the WIMSE adoption discussion noted above. The framework identifies the need for concrete delegation mechanics and defers them to OAuth flows. This document supplies those mechanics and is designed as a companion, not a replacement.
 
-**draft-ietf-wimse-wpt** (WIMSE WG, adopted, latest revision -01): Defines the Workload Proof Token, a WIMSE-native proof-of-possession mechanism for workload-to-workload calls. This document currently profiles OAuth DPoP [RFC9449] for Delegation Token proof-of-possession rather than WPT; because this draft targets the WIMSE WG specifically, the choice of DPoP over WPT — or a path to supporting both — needs to be justified explicitly before WG submission rather than left implicit.
+**draft-ietf-wimse-arch** [WIMSE-ARCH]: Defines the trust domain model and terminology assumed here for WIMSE deployments. The Delegation Server is a service within a trust domain, and Agent identities established per Section 4 are compatible with WIMSE workload identifiers.
 
-**draft-ietf-wimse-arch** (WIMSE WG, adopted): The working group's own architecture document. This specification's terminology (Delegation Server, Agent, Subject, Credential Vault) is not currently cross-mapped to WIMSE architecture terms (Workload, Workload Identity, Trust Domain, etc.); that mapping should be made explicit given this document targets the WIMSE WG.
+**draft-ietf-wimse-wpt** [WIMSE-WPT]: Defines the Workload Proof Token (WPT), a proof-of-possession mechanism for workloads. This protocol binds Delegation Tokens with DPoP [RFC9449] instead: DTs are exercised over plain HTTP by ephemeral agents that may sit outside any WIMSE trust domain, the deployment shape DPoP already serves. A future revision may profile WPT for DS-to-resource-server hops inside WIMSE trust domains.
 
-**draft-schwenkschuster-wimse-credential-exchange** (WIMSE WG, latest revision -03): A similarly-named, same-WG draft addressing a different problem — how a workload obtains a *different* credential or identity for a given context, not human-to-agent delegation. Worth a one-line disambiguation given the naming overlap, but not directly competing.
+**draft-ni-wimse-ai-agent-identity** [WIMSE-AGENT]: Addresses agent identity within WIMSE. The did:key model used here is compatible. This document adds credential wrapping, revocation, consent gating, and chain verification.
 
-**draft-goswami-agentic-jwt-00** (Goswami, December 2025): Agent checksums and intent binding are complementary. An agent checksum MAY appear as a claim in delegation tokens as defined in Section 4.2. Note: a US patent has been filed on this mechanism; this specification adopts the binding concept while avoiding specific patented mechanisms. **Status note:** this draft expired on 2026-07-04 with no successor revision published as of this writing; treat this as a design inspiration rather than an active companion document until it is refreshed.
+**draft-reece-wimse-cross-org-delegation** [CROSS-ORG-REQS]: A problem statement and requirements catalogue for cross-organizational delegation, used on the WIMSE list as a common frame for evaluating delegation proposals. A future revision of this document will map the protocol against those requirements.
 
-**draft-nennemann-wimse-ect-00** (Nennemann, February 2026): Execution Context Tokens define an audit record format. This protocol's audit chain is designed to be ECT-compatible.
+#### 1.2.2 Delegation Chain Mechanics
+
+**draft-ietf-oauth-identity-chaining** [OAUTH-CHAINING]: Approved for publication in 2026. Chains identity and authorization across trust domains by exchanging a token in one domain for a JWT assertion accepted in another. It preserves identity across hops but does not constrain what each hop may do. This protocol adds structural attenuation and receipt-based chain verification on the same RFC 8693 substrate. The two compose.
+
+**draft-niyikiza-oauth-attenuating-agent-tokens** [AAT]: Defines tokens a holder can attenuate offline, in the macaroon tradition. Same goal as Section 5.3, different trust model: AAT verification relies on the root issuer key and offline derivation, while this protocol keeps the Delegation Server in the loop at every hop in exchange for synchronous revocation (Section 7) and server-checked strict-subset validation.
+
+**draft-gco-oauth-delegate-sd-jwt** [DELEGATE-SD-JWT]: Delegates SD-JWT credentials holder-to-holder by allowing a Key Binding JWT to act as an SD-JWT. It operates at the credential format layer; this protocol operates at the delegation service layer. A DS could issue capability attestations as Delegate SD-JWTs without changing the mechanics defined here.
+
+**draft-zhu-oauth-async-delegation** [ASYNC-DELEG]: Defines delegated refresh tokens so agents can act while the user is offline. This protocol answers the same need by keeping refresh tokens in the Credential Vault and giving agents only short-lived DTs. The two are alternative positions on whether agents may hold long-lived credentials at all.
+
+**draft-oauth-ai-agents-on-behalf-of-user** [OBO-USER] (expired February 2026): Introduced `requested_actor` and `actor_token` parameters binding the acting agent into the authorization code exchange. That closes the same actor-binding weakness this protocol closes with `prf` receipts, but only for the first hop and only at the authorization server. See Section 9.2.
+
+#### 1.2.3 Credential Intermediation
+
+**draft-hartman-credential-broker-4-agents** [CB4A]: Specifies a credential vaulting broker that mediates agent API access through short-lived, narrowly scoped proxy credentials. Architecturally the closest work to the Delegation Server and Credential Vault defined here. CB4A defines the broker; this document additionally defines the delegation chain (attenuation, receipts, sub-delegation), the consent flow, and the revocation cascade such a broker must enforce.
+
+**draft-araut-oauth-transaction-tokens-for-agents** [TXN-AGENTS]: Extends transaction tokens to carry agent context in the `act` claim for intra-domain call chains. Complementary: transaction tokens propagate context within a domain after authorization exists; this protocol governs how the authorization comes to exist.
+
+**draft-schwenkschuster-wimse-credential-exchange** [WIMSE-CRED-X] (expired): Despite the similar name, addresses a workload exchanging its own credential for a different format or trust domain. This document addresses human-to-agent delegation over stored credentials that are never issued to the requesting party.
+
+#### 1.2.4 Consent, Mandates, and Audit Evidence
+
+**draft-yossif-agent-mandate-problem** [MANDATE-PS]: A problem statement on verifiable human mandates: intent authorized at one time, executed autonomously later. The consent records (Section 8) and capability constraints defined here are a concrete answer to part of that problem space.
+
+**draft-nelson-agent-delegation-receipts** [DELEG-RECEIPTS]: Defines user-signed delegation receipts anchored to an append-only log before an agent acts, removing the operator as a trusted intermediary. The `prf` receipts in Section 5.3 are DS-signed and bind hops within a chain; Nelson's receipts are user-signed and bind the user's instruction to the run. They answer different trust questions and can coexist.
+
+**draft-nennemann-wimse-ect** [ECT]: Execution Context Tokens define an audit record format. This protocol's audit chain is designed to be ECT-compatible.
+
+**draft-goswami-agentic-jwt** [AGENTIC-JWT] (expired July 2026): Proposed agent checksums and intent binding. The `agent_checksum` claim (Section 4.2) remains defined for compatibility, with no dependency taken. A US patent has been filed on the underlying mechanism; this specification avoids the patented specifics.
 
 ### 1.3 Design Principles
 
@@ -71,7 +99,7 @@ This document profiles existing standards to address all seven gaps.
 
 **Revocation is synchronous.** A user revoking delegation takes effect within the SLA defined in Section 7. Eventual consistency is not acceptable for credential revocation in adversarially-promptable systems.
 
-**Capability-shaped, not identity-scoped.** Delegation tokens authorize specific operations on specific resources with specific constraints — not "Agent X can access Service Y." Follows the NORA (designation = authority) principle from capability security.
+**Capability-shaped, not identity-scoped.** Delegation tokens authorize specific operations on specific resources with specific constraints, not "Agent X can access Service Y." Follows the NORA (designation = authority) principle from capability security.
 
 **Chain integrity is cryptographic.** Each delegation hop produces a signed receipt. The chain is verifiable end-to-end without trusting intermediate agents, addressing the RFC 8693 delegation chain splicing vulnerability.
 
@@ -152,7 +180,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 └──────────────────────────────────────────────────────┘
 ```
 
-**Critical architectural property:** The Agent's trust boundary extends only to the network interface of the Delegation Server. The Agent never crosses into the Vault. This eliminates credential theft as an attack surface — there is nothing for a compromised agent to exfiltrate.
+**Critical architectural property:** The Agent's trust boundary extends only to the network interface of the Delegation Server. The Agent never crosses into the Vault. This eliminates credential theft as an attack surface: there is nothing for a compromised agent to exfiltrate.
 
 ### 3.1 Protocol Version Negotiation
 
@@ -204,7 +232,7 @@ version floor above `0.1.0` MUST reject missing protocol-version headers with
 
 ### 4.1 Ephemeral Key Pairs
 
-An Agent MUST generate an Ed25519 or P-256 key pair at instantiation. The DID is derived deterministically from the public key using the `did:key` method [DID-KEY]. No pre-registration is required. The DS MUST NOT reject a DID it has not seen before.
+An Agent MUST generate an Ed25519 or P-256 key pair at instantiation. The DID is derived deterministically from the public key using the `did:key` method [DID-KEY], a DID method conforming to [DID-CORE]. No pre-registration is required. The DS MUST NOT reject a DID it has not seen before.
 
 ### 4.2 Agent Authentication
 
@@ -223,7 +251,7 @@ Optional claims:
 
 | Claim | Value | Notes |
 |-------|-------|-------|
-| `agent_model` | Model identifier | e.g., `"vendor:model-id"` (implementation-defined string) |
+| `agent_model` | Model identifier | Vendor-prefixed, e.g., `"vendor:model-id"` |
 | `agent_operator` | Operator DID or URL | Organization running the agent |
 | `agent_checksum` | SHA-256 hash | Intent binding per [AGENTIC-JWT]; advisory only due to IPR |
 
@@ -342,13 +370,11 @@ Consent MUST be re-requested when:
 
 ### 9.1 Confused Deputy Mitigation
 
-Capability-shaped tokens eliminate ambient authority. An adversarially-prompted agent cannot widen its own capabilities since attenuation is DS-enforced. OAuth access tokens are ambient authority — any code holding the token exercises its full scope. For adversarially-promptable agents, this is a structural exploit vector. Cred delegation tokens are operation-bound, resource-specific, and constraint-bearing, following the principle that designation should equal authority [CONFUSED-DEPUTY].
+Capability-shaped tokens eliminate ambient authority. An adversarially-prompted agent cannot widen its own capabilities since attenuation is DS-enforced. OAuth access tokens are ambient authority: any code holding the token exercises its full scope. For adversarially-promptable agents, this is a structural exploit vector. Cred delegation tokens are operation-bound, resource-specific, and constraint-bearing, following the principle that designation should equal authority [CONFUSED-DEPUTY].
 
 ### 9.2 Delegation Chain Splicing
 
-The mandatory `prf` chain with DS-signed receipts addresses the RFC 8693 §2.1-2.2 vulnerability disclosed to the OAuth WG on February 26, 2026 [OAUTH-SPLICING]. Each receipt cross-references parent and child DT `jti` values along with both agent DIDs, preventing presentation of tokens from mismatched delegation contexts.
-
-[OAUTH-OBO] addresses the same disclosure at a different layer: it binds the agent as `requested_actor`/`actor_token` into a single authorization-code-to-access-token exchange between one OAuth client and one authorization server. The `prf` receipt chain defined here addresses the multi-hop case — an arbitrary-depth tree of Agent-to-Agent sub-delegations mediated by the DS — which [OAUTH-OBO] does not cover. The two mechanisms are complementary rather than competing: a DS could accept an [OAUTH-OBO]-style actor-bound access token as the credential it wraps, while still producing `prf` receipts for any further sub-delegation beyond that first hop.
+The mandatory `prf` chain with DS-signed receipts addresses the RFC 8693 §2.1-2.2 vulnerability disclosed to the OAuth WG on February 26, 2026 [OAUTH-SPLICING]. Each receipt cross-references parent and child DT `jti` values along with both agent DIDs, preventing presentation of tokens from mismatched delegation contexts. The `requested_actor`/`actor_token` binding proposed in [OBO-USER] mitigates the same class of attack at the authorization server for the first delegation hop; the `prf` chain extends equivalent protection across every subsequent hop (see Section 1.2). The two can compose: a DS can accept an actor-bound access token issued under [OBO-USER] as the credential it wraps, then produce `prf` receipts for every sub-delegation beyond that first hop.
 
 ### 9.3 DPoP Binding
 
@@ -365,6 +391,10 @@ Implementations SHOULD enforce a maximum delegation chain depth of 5. Unbounded 
 ### 9.6 Token Lifetime
 
 The default DT lifetime of 15 minutes limits the blast radius of any single token compromise. Implementations MUST NOT issue DTs with a lifetime exceeding 1 hour.
+
+### 9.7 Model Identity and Substitution
+
+The `agent_model` and `agent_checksum` claims are self-asserted. A credential valid for an agent remains valid if the operator substitutes the underlying model, a threat class raised against the klrc framework in March 2026. Verifying model identity requires attestation of the agent runtime and is out of scope for this document. Deployments that need it should treat these claims as advisory policy input, not proof, and look to remote attestation work in the RATS WG.
 
 ---
 
@@ -384,7 +414,7 @@ This document requests registration of:
 
 - **[RFC2119]** Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels," BCP 14, RFC 2119, March 1997.
 - **[RFC8174]** Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words," BCP 14, RFC 8174, May 2017.
-- **[RFC6749]** Hardt, D., Ed., "The OAuth 2.0 Authorization Framework," RFC 6749, October 2012.
+- **[RFC6749]** Hardt, D., "The OAuth 2.0 Authorization Framework," RFC 6749, October 2012.
 - **[RFC8693]** Jones, M., Nadalin, A., Campbell, B., Bradley, J., Mortimore, C., "OAuth 2.0 Token Exchange," RFC 8693, January 2020.
 - **[RFC9449]** Fett, D., Campbell, B., Bradley, J., Lodderstedt, T., Jones, M., Waite, D., "OAuth 2.0 Demonstrating Proof of Possession (DPoP)," RFC 9449, September 2023.
 - **[RFC9396]** Lodderstedt, T., Richer, J., Campbell, B., "OAuth 2.0 Rich Authorization Requests," RFC 9396, May 2023.
@@ -398,17 +428,32 @@ This document requests registration of:
 - **[UCAN-SPEC]** Zelenka, B., et al., "UCAN Delegation," ucan-wg/delegation, RC v1.0.
 - **[CONFUSED-DEPUTY]** Hardy, N., "The Confused Deputy (or Why Capabilities Might Have Been Invented)," ACM SIGOPS Operating Systems Review, 1988.
 - **[MILLER-2006]** Miller, M.S., "Robust Composition: Towards a Unified Approach to Access Control and Concurrency Control," PhD thesis, Johns Hopkins University, 2006.
-- **[KLRC-AIAGENT]** Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B., Steele, N., "AI Agent Authentication and Authorization," draft-klrc-aiagent-auth, latest revision -02, June 2026.
-- **[OAUTH-OBO]** "OAuth 2.0 Extension: On-Behalf-Of User Authorization for AI Agents," draft-oauth-ai-agents-on-behalf-of-user, latest revision -02.
+- **[KLRC-AIAGENT]** Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B., Steele, N., "AI Agent Authentication and Authorization," draft-klrc-aiagent-auth-02, June 2026.
+- **[OAUTH-CHAINING]** "OAuth Identity and Authorization Chaining Across Domains," draft-ietf-oauth-identity-chaining-15, IETF OAuth Working Group, June 2026 (approved for publication).
+- **[AAT]** Aimable, N., "Attenuating Authorization Tokens for Agentic Delegation Chains," draft-niyikiza-oauth-attenuating-agent-tokens-01, June 2026.
+- **[DELEGATE-SD-JWT]** Oliver, G., "Delegate SD-JWT," draft-gco-oauth-delegate-sd-jwt-00, April 2026.
+- **[ASYNC-DELEG]** Zhu, L., "Delegated Refresh Tokens for OAuth 2.0 Token Exchange," draft-zhu-oauth-async-delegation-04, July 2026.
+- **[CB4A]** Hartman, K., "Credential Broker for Agents (CB4A)," draft-hartman-credential-broker-4-agents-00, March 2026.
+- **[TXN-AGENTS]** Raut, A., "Transaction Tokens for Agents," draft-araut-oauth-transaction-tokens-for-agents, April 2026.
+- **[DELEG-RECEIPTS]** Nelson, R., "Delegation Receipt Protocol for AI Agent Authorization," draft-nelson-agent-delegation-receipts-05, May 2026.
+- **[CROSS-ORG-REQS]** Reece, M., "Cross-Organizational Delegation for Workload and Agent Identity," draft-reece-wimse-cross-org-delegation-00, June 2026.
+- **[MANDATE-PS]** Yossif, M., "Problem Statement on Verifiable Human Mandates for Autonomous Agent Actions," draft-yossif-agent-mandate-problem-00, July 2026.
 - **[OAUTH-SPLICING]** "Security Consideration: Delegation Chain Splicing in RFC 8693 Token Exchange," OAuth WG mailing list, February 26, 2026.
+- **[OBO-USER]** Dissanayaka, T., Dissanayaka, A., "OAuth 2.0 Extension: On-Behalf-Of User Authorization for AI Agents," draft-oauth-ai-agents-on-behalf-of-user-02, August 2025 (expired).
+- **[WIMSE-ARCH]** "Workload Identity in a Multi System Environment (WIMSE) Architecture," draft-ietf-wimse-arch-08, IETF WIMSE Working Group, July 2026.
+- **[WIMSE-WPT]** "WIMSE Workload Proof Token," draft-ietf-wimse-wpt-01, IETF WIMSE Working Group, March 2026.
 - **[WIMSE-AGENT]** Ni, Y., Liu, P., "WIMSE Applicability for AI Agents," draft-ni-wimse-ai-agent-identity-02, February 2026.
-- **[WIMSE-WPT]** "WIMSE Workload Proof Token," draft-ietf-wimse-wpt, latest revision -01.
-- **[WIMSE-ARCH]** "Workload Identity in a Multi System Environment (WIMSE) Architecture," draft-ietf-wimse-arch, WIMSE WG (adopted).
-- **[WIMSE-CRED-EXCHANGE]** Schwenkschuster, A., "WIMSE Credential Exchange," draft-schwenkschuster-wimse-credential-exchange-03, October 2025.
-- **[AGENTIC-JWT]** Goswami, A., "Secure Intent Protocol for Agentic Systems," draft-goswami-agentic-jwt-00, December 2025 (expired 2026-07-04; no successor published as of this writing).
+- **[WIMSE-CRED-X]** Schwenkschuster, A., "WIMSE Credential Exchange," draft-schwenkschuster-wimse-credential-exchange-03, October 2025 (expired).
+- **[AGENTIC-JWT]** Goswami, A., "Secure Intent Protocol for Agentic Systems," draft-goswami-agentic-jwt-00, December 2025 (expired July 2026).
 - **[ECT]** Nennemann, C., "Execution Context Tokens," draft-nennemann-wimse-ect-00, February 2026.
 - **[OWASP-AGENTIC]** OWASP, "Top 10 for Agentic Applications v1.0," December 2025.
 - **[NIST-AGENT-ID]** NIST NCCoE, "Accelerating the Adoption of Software and AI Agent Identity and Authorization," February 2026.
+
+---
+
+## Acknowledgments
+
+The design of this protocol draws on UCAN attenuation semantics [UCAN-SPEC], the object-capability literature, and ongoing work in the IETF WIMSE and OAuth working groups. Threat modeling was informed by [OWASP-AGENTIC] and [NIST-AGENT-ID].
 
 ---
 

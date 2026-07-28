@@ -1,14 +1,14 @@
 # Contributing to Cred Protocol
 
-Contributions to the protocol specification are welcome. This is an early-stage draft targeting IETF submission — the most valuable contributions right now are protocol-level analysis, not cosmetic edits.
+Contributions to the protocol specification are welcome. This is an early-stage draft targeting IETF submission; the most valuable contributions right now are protocol-level analysis, not cosmetic edits.
 
 ## What We're Looking For
 
-- **Protocol gaps** — scenarios the current specification doesn't adequately address
-- **Security analysis** — vulnerabilities, threat models, attack vectors against the proposed mechanisms
-- **Implementation experience** — issues encountered building against the spec; discrepancies between the spec and what's needed in practice
-- **IETF engagement** — review of related Internet-Drafts (WIMSE, OAuth WG); mailing list discussion that bears on this work
-- **Second implementations** — interoperability requires more than one implementation
+- **Protocol gaps**: scenarios the current specification doesn't adequately address
+- **Security analysis**: vulnerabilities, threat models, attack vectors against the proposed mechanisms
+- **Implementation experience**: issues encountered building against the spec; discrepancies between the spec and what's needed in practice
+- **IETF engagement**: review of related Internet-Drafts (WIMSE, OAuth WG); mailing list discussion that bears on this work
+- **Second implementations**: interoperability requires more than one implementation
 
 ## How to Contribute
 
@@ -22,10 +22,10 @@ Pull requests that improve clarity, fix normative language inconsistencies, or a
 
 The following decisions are settled. Proposals that revisit them should include new evidence or analysis not present in the current spec:
 
-1. **Compose, don't invent** — every mechanism must reuse an existing standard
-2. **Credentials never cross the agent trust boundary** — the proxy model (Section 6) is a core security property
-3. **Attenuation is structural** — authority can only narrow at each hop, enforced by the Delegation Server
-4. **Revocation is synchronous** — eventual consistency is not acceptable for this threat model
+1. **Compose, don't invent**: every mechanism must reuse an existing standard
+2. **Credentials never cross the agent trust boundary**: the proxy model (Section 6) is a core security property
+3. **Attenuation is structural**: authority can only narrow at each hop, enforced by the Delegation Server
+4. **Revocation is synchronous**: eventual consistency is not acceptable for this threat model
 
 ## IETF Context
 
@@ -34,4 +34,4 @@ This draft is targeting the IETF WIMSE WG and OAuth WG. Relevant mailing lists:
 - WIMSE: [wimse@ietf.org](https://www.ietf.org/mailman/listinfo/wimse)
 - OAuth: [oauth@ietf.org](https://www.ietf.org/mailman/listinfo/oauth)
 
-This specification is designed as a companion to [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (latest revision -02). Engagement with that document and its authors on the mailing lists is encouraged, as is engagement with the more recently active [draft-oauth-ai-agents-on-behalf-of-user](https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/) and the WIMSE WG's adopted [draft-ietf-wimse-wpt](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/) and [draft-ietf-wimse-arch](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/), both of which bear directly on this specification's design choices.
+This specification is designed as a companion to [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (at -02 as of June 2026). Engagement with that document and its authors on the mailing lists is encouraged.
