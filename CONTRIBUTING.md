@@ -1,14 +1,14 @@
 # Contributing to Cred Protocol
 
-Contributions to the protocol specification are welcome. This is an early-stage draft targeting IETF submission — the most valuable contributions right now are protocol-level analysis, not cosmetic edits.
+Contributions to the protocol specification are welcome. This is an early-stage draft targeting IETF submission; the most valuable contributions right now are protocol-level analysis, not cosmetic edits.
 
 ## What We're Looking For
 
-- **Protocol gaps** — scenarios the current specification doesn't adequately address
-- **Security analysis** — vulnerabilities, threat models, attack vectors against the proposed mechanisms
-- **Implementation experience** — issues encountered building against the spec; discrepancies between the spec and what's needed in practice
-- **IETF engagement** — review of related Internet-Drafts (WIMSE, OAuth WG); mailing list discussion that bears on this work
-- **Second implementations** — interoperability requires more than one implementation
+- **Protocol gaps**: scenarios the current specification doesn't adequately address
+- **Security analysis**: vulnerabilities, threat models, attack vectors against the proposed mechanisms
+- **Implementation experience**: issues encountered building against the spec; discrepancies between the spec and what's needed in practice
+- **IETF engagement**: review of related Internet-Drafts (WIMSE, OAuth WG); mailing list discussion that bears on this work
+- **Second implementations**: interoperability requires more than one implementation
 
 ## How to Contribute
 
@@ -22,10 +22,10 @@ Pull requests that improve clarity, fix normative language inconsistencies, or a
 
 The following decisions are settled. Proposals that revisit them should include new evidence or analysis not present in the current spec:
 
-1. **Compose, don't invent** — every mechanism must reuse an existing standard
-2. **Credentials never cross the agent trust boundary** — the proxy model (Section 6) is a core security property
-3. **Attenuation is structural** — authority can only narrow at each hop, enforced by the Delegation Server
-4. **Revocation is synchronous** — eventual consistency is not acceptable for this threat model
+1. **Compose, don't invent**: every mechanism must reuse an existing standard
+2. **Credentials never cross the agent trust boundary**: the proxy model (Section 6) is a core security property
+3. **Attenuation is structural**: authority can only narrow at each hop, enforced by the Delegation Server
+4. **Revocation is synchronous**: eventual consistency is not acceptable for this threat model
 
 ## IETF Context
 

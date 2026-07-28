@@ -70,7 +70,7 @@ A conformant implementation of the Credential Delegation Protocol MUST satisfy t
 - MUST NOT request sub-delegation capabilities broader than those in its own DT
 - MUST declare `no_delegate` intent when not intending to sub-delegate (RECOMMENDED)
 
-## Resource Server (RS) — Optional Native Support
+## Resource Server (RS): Optional Native Support
 
 A resource server that natively supports Cred Protocol:
 

@@ -10,37 +10,37 @@
 
 MCP standardizes agent-to-tool connectivity. A2A standardizes agent-to-agent communication. No open protocol standard governs how credentials flow through these connections.
 
-Every major platform treats agent credential management as the developer's problem: environment variables, hardcoded API keys, or proprietary vendor solutions. The result is that 53% of MCP servers use static long-lived secrets and only 8.5% use OAuth — not because developers prefer this, but because no standard exists.
+Every major platform treats agent credential management as the developer's problem: environment variables, hardcoded API keys, or proprietary vendor solutions. The result is that 53% of MCP servers use static long-lived secrets and only 8.5% use OAuth, not because developers prefer this, but because no standard exists.
 
 ## What This Protocol Defines
 
 A profile of existing OAuth 2.0 standards that enables:
 
-- **Multi-hop delegation chains** — User → Agent A → Agent B → Agent C, with cryptographic attenuation at each hop
-- **Cross-IdP interoperability** — works across Okta, Entra, Google, GitHub, and any OAuth provider
-- **Credential wrapping** — agents never see raw credentials; the Delegation Server exercises them on the agent's behalf
-- **Synchronous cascading revocation** — revocation propagates in under 5 seconds across the entire delegation tree
-- **Capability-shaped tokens** — not "access Google Drive" but "read file X in folder Y until time T with max 10 calls"
-- **Ephemeral agent identity** — no pre-registration; agents bootstrap identity from a `did:key` at instantiation
+- **Multi-hop delegation chains**: User → Agent A → Agent B → Agent C, with cryptographic attenuation at each hop
+- **Cross-IdP interoperability**: works across Okta, Entra, Google, GitHub, and any OAuth provider
+- **Credential wrapping**: agents never see raw credentials; the Delegation Server exercises them on the agent's behalf
+- **Synchronous cascading revocation**: revocation propagates in under 5 seconds across the entire delegation tree
+- **Capability-shaped tokens**: not "access Google Drive" but "read file X in folder Y until time T with max 10 calls"
+- **Ephemeral agent identity**: no pre-registration; agents bootstrap identity from a `did:key` at instantiation
 
 ## Protocol Composition
 
-This protocol is a precise profile of existing standards — no new token formats, no new grant types.
+This protocol is a precise profile of existing standards: no new token formats, no new grant types.
 
 | Standard | Role |
 |----------|------|
-| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) | OAuth 2.0 Token Exchange — wire protocol and delegation semantics |
-| [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449) | DPoP — proof-of-possession binding |
-| [RFC 9396](https://www.rfc-editor.org/rfc/rfc9396) | Rich Authorization Requests — capability structure |
-| [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523) | JWT Bearer — agent authentication |
+| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) | OAuth 2.0 Token Exchange: wire protocol and delegation semantics |
+| [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449) | DPoP: proof-of-possession binding |
+| [RFC 9396](https://www.rfc-editor.org/rfc/rfc9396) | Rich Authorization Requests: capability structure |
+| [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523) | JWT Bearer: agent authentication |
 | [OIDC-CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) | Backchannel consent for async/offline agents |
 | [W3C did:key](https://w3c-ccg.github.io/did-method-key/) | Ephemeral agent identity without pre-registration |
 
 ## Relationship to Active IETF Work
 
-This protocol is designed to **complement** [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (Kasselman, Lombardo, Rosomakho, Campbell, Steele — at -02 as of June 2026), which provides a comprehensive AI agent auth framework but explicitly defers delegation protocol mechanics. This specification provides those mechanics.
+The OAuth WG was rechartered in June 2026 with agents acting on behalf of users in scope, and the WIMSE WG is discussing adoption of AI agent authentication work following its June 3, 2026 interim. This protocol is designed to **complement** [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (at -02 as of June 2026), which provides the framework but defers delegation protocol mechanics. This specification provides those mechanics.
 
-It is grounded in the WIMSE WG's adopted [architecture](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/) and discusses its relationship to the WG's [Workload Proof Token](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/) and to [draft-oauth-ai-agents-on-behalf-of-user](https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/) in Section 1.2 of the specification.
+Section 1.2 of the specification positions the protocol against the WIMSE WG's [architecture](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/) and [Workload Proof Token](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/), the IESG-approved [identity chaining](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-chaining/) work, and the closest individual drafts on attenuating tokens, credential brokering, delegated refresh tokens, SD-JWT delegation, delegation receipts, and human mandates.
 
 ## Repository Contents
 
@@ -53,7 +53,7 @@ It is grounded in the WIMSE WG's adopted [architecture](https://datatracker.ietf
 
 ## Reference Implementation
 
-[Cred](https://cred.ninja) is the reference implementation of this protocol — a hosted Delegation Server with SDKs for TypeScript, Python, and MCP.
+[Cred](https://cred.ninja) is the reference implementation of this protocol: a hosted Delegation Server with SDKs for TypeScript, Python, and MCP.
 
 ## Contributing
 
