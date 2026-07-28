@@ -29,7 +29,7 @@ AI agents operate autonomously. They are ephemeral (spawned on demand), numerous
 
 **1. No agent identity primitive.** OAuth clients require pre-registration. Agents are ephemeral and cannot register at instantiation time. SPIFFE requires admin provisioning. No standard defines bootstrapping an agent identity from nothing.
 
-**2. No delegation chain attenuation.** When Agent A sub-delegates to Agent B, existing standards do not enforce that authority can only narrow. RFC 8693 records delegation chains via nested `act` claims but treats them as "informational only", with no enforcement and no structural guarantee. The delegation chain splicing vulnerability (disclosed to the OAuth WG mailing list, February 26, 2026) demonstrates that RFC 8693 §2.1-2.2 permits a compromised intermediary to present mismatched `subject_token` and `actor_token` from different delegation contexts, producing a properly-signed token asserting a delegation chain that never occurred.
+**2. No delegation chain attenuation.** When Agent A sub-delegates to Agent B, existing standards do not enforce that authority can only narrow. RFC 8693 records delegation chains via nested `act` claims but treats them as "informational only", with no enforcement and no structural guarantee. The delegation chain splicing vulnerability (disclosed to the OAuth WG mailing list, February 26, 2026 [OAUTH-SPLICING]) demonstrates that RFC 8693 §2.1-2.2 permits a compromised intermediary to present mismatched `subject_token` and `actor_token` from different delegation contexts, producing a properly-signed token asserting a delegation chain that never occurred.
 
 **3. No credential wrapping.** Agents need to use credentials at resource servers that do not understand delegation. No standard defines how a delegation token authorizes credential exercise without exposing the raw credential to the agent.
 
@@ -374,7 +374,7 @@ Capability-shaped tokens eliminate ambient authority. An adversarially-prompted 
 
 ### 9.2 Delegation Chain Splicing
 
-The mandatory `prf` chain with DS-signed receipts addresses the RFC 8693 §2.1-2.2 vulnerability disclosed to the OAuth WG on February 26, 2026. Each receipt cross-references parent and child DT `jti` values along with both agent DIDs, preventing presentation of tokens from mismatched delegation contexts. The `requested_actor`/`actor_token` binding proposed in [OBO-USER] mitigates the same class of attack at the authorization server for the first delegation hop; the `prf` chain extends equivalent protection across every subsequent hop (see Section 1.2).
+The mandatory `prf` chain with DS-signed receipts addresses the RFC 8693 §2.1-2.2 vulnerability disclosed to the OAuth WG on February 26, 2026 [OAUTH-SPLICING]. Each receipt cross-references parent and child DT `jti` values along with both agent DIDs, preventing presentation of tokens from mismatched delegation contexts. The `requested_actor`/`actor_token` binding proposed in [OBO-USER] mitigates the same class of attack at the authorization server for the first delegation hop; the `prf` chain extends equivalent protection across every subsequent hop (see Section 1.2). The two can compose: a DS can accept an actor-bound access token issued under [OBO-USER] as the credential it wraps, then produce `prf` receipts for every sub-delegation beyond that first hop.
 
 ### 9.3 DPoP Binding
 
@@ -438,6 +438,7 @@ This document requests registration of:
 - **[DELEG-RECEIPTS]** Nelson, R., "Delegation Receipt Protocol for AI Agent Authorization," draft-nelson-agent-delegation-receipts-05, May 2026.
 - **[CROSS-ORG-REQS]** Reece, M., "Cross-Organizational Delegation for Workload and Agent Identity," draft-reece-wimse-cross-org-delegation-00, June 2026.
 - **[MANDATE-PS]** Yossif, M., "Problem Statement on Verifiable Human Mandates for Autonomous Agent Actions," draft-yossif-agent-mandate-problem-00, July 2026.
+- **[OAUTH-SPLICING]** "Security Consideration: Delegation Chain Splicing in RFC 8693 Token Exchange," OAuth WG mailing list, February 26, 2026.
 - **[OBO-USER]** Dissanayaka, T., Dissanayaka, A., "OAuth 2.0 Extension: On-Behalf-Of User Authorization for AI Agents," draft-oauth-ai-agents-on-behalf-of-user-02, August 2025 (expired).
 - **[WIMSE-ARCH]** "Workload Identity in a Multi System Environment (WIMSE) Architecture," draft-ietf-wimse-arch-08, IETF WIMSE Working Group, July 2026.
 - **[WIMSE-WPT]** "WIMSE Workload Proof Token," draft-ietf-wimse-wpt-01, IETF WIMSE Working Group, March 2026.
