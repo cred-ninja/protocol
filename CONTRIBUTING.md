@@ -34,4 +34,4 @@ This draft is targeting the IETF WIMSE WG and OAuth WG. Relevant mailing lists:
 - WIMSE: [wimse@ietf.org](https://www.ietf.org/mailman/listinfo/wimse)
 - OAuth: [oauth@ietf.org](https://www.ietf.org/mailman/listinfo/oauth)
 
-This specification is designed as a companion to [draft-klrc-aiagent-auth-00](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/). Engagement with that document and its authors on the mailing lists is encouraged.
+This specification is designed as a companion to [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (latest revision -02). Engagement with that document and its authors on the mailing lists is encouraged, as is engagement with the more recently active [draft-oauth-ai-agents-on-behalf-of-user](https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/) and the WIMSE WG's adopted [draft-ietf-wimse-wpt](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/) and [draft-ietf-wimse-arch](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/), both of which bear directly on this specification's design choices.
