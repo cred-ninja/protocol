@@ -2,7 +2,7 @@
 
 **An open credential delegation protocol for AI agents.**
 
-> **Status:** Pre-submission draft · Targeting IETF WIMSE WG / OAuth WG at IETF 126 (Vienna, July 2026)
+> **Status:** Pre-submission draft · Actively seeking WIMSE WG / OAuth WG engagement and adoption
 
 ---
 
@@ -38,7 +38,9 @@ This protocol is a precise profile of existing standards — no new token format
 
 ## Relationship to Active IETF Work
 
-This protocol is designed to **complement** [draft-klrc-aiagent-auth-00](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (Kasselman, Lombardo, Rosomakho, Campbell — March 2026), which provides a comprehensive AI agent auth framework but explicitly defers delegation protocol mechanics. This specification provides those mechanics.
+This protocol is designed to **complement** [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (Kasselman, Lombardo, Rosomakho, Campbell, Steele — latest revision -02, June 2026), which provides a comprehensive AI agent auth framework but explicitly defers delegation protocol mechanics. This specification provides those mechanics.
+
+It also intersects with two other lines of active work: [draft-oauth-ai-agents-on-behalf-of-user](https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/) (OAuth WG, latest -02), which addresses the same RFC 8693 delegation-chain-splicing concern via a narrower actor-binding extension to the authorization code flow, and the WIMSE WG's own adopted work — [draft-ietf-wimse-wpt](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/) (Workload Proof Token) and [draft-ietf-wimse-arch](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/) — which this specification should align terminology and proof-of-possession choices against before WG submission. See Section 1.2 of the draft for the detailed comparison.
 
 ## Repository Contents
 
