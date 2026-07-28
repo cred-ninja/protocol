@@ -2,7 +2,7 @@
 
 **An open credential delegation protocol for AI agents.**
 
-> **Status:** Pre-submission draft · Targeting IETF WIMSE WG / OAuth WG at IETF 126 (Vienna, July 2026)
+> **Status:** Pre-submission draft · Targeting IETF WIMSE WG / OAuth WG · Next milestone: datatracker submission ahead of IETF 127 (San Francisco, November 2026)
 
 ---
 
@@ -38,7 +38,9 @@ This protocol is a precise profile of existing standards — no new token format
 
 ## Relationship to Active IETF Work
 
-This protocol is designed to **complement** [draft-klrc-aiagent-auth-00](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (Kasselman, Lombardo, Rosomakho, Campbell — March 2026), which provides a comprehensive AI agent auth framework but explicitly defers delegation protocol mechanics. This specification provides those mechanics.
+This protocol is designed to **complement** [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (Kasselman, Lombardo, Rosomakho, Campbell, Steele — at -02 as of June 2026), which provides a comprehensive AI agent auth framework but explicitly defers delegation protocol mechanics. This specification provides those mechanics.
+
+It is grounded in the WIMSE WG's adopted [architecture](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/) and discusses its relationship to the WG's [Workload Proof Token](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/) and to [draft-oauth-ai-agents-on-behalf-of-user](https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/) in Section 1.2 of the specification.
 
 ## Repository Contents
 
