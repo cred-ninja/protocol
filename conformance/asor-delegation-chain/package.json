@@ -1,0 +1,14 @@
+{
+  "name": "cred-conformance-asor-delegation-chain",
+  "private": true,
+  "type": "module",
+  "description": "Runs draft-asor-wimse-agent-delegation-chain-00 Appendix B vectors through Cred's delegation chain logic",
+  "scripts": {
+    "test": "tsx run.ts",
+    "test:allow-gaps": "tsx run.ts --allow-gaps"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -83,3 +83,15 @@ A resource server that natively supports Cred Protocol:
 ---
 
 *Conformance tests are planned for a future version of this specification.*
+
+## Interoperability Vectors
+
+Cred is scored against the Appendix B interop vectors of draft-asor-wimse-agent-delegation-chain-00, which pin the wire subsumption relation (scope narrowing with prefix wildcards, chain depth, parent commitment linkage, expiry ordering, signature validity) for a chain of Delegation Tokens. The runner, the vendored vectors, the claim mapping, and the current matrix are in [`conformance/asor-delegation-chain/`](conformance/asor-delegation-chain/README.md). It runs in CI against the sdk main branch.
+
+Current standing: 6 of 7. The remaining gap is constraint ceilings, which Cred enforces from server policy at exercise time rather than carrying in the receipt; whether to change that is an open design question documented in the sdk repo.
+
+Requirements this adds for a Delegation Server, beyond those above:
+- MUST treat a granted scope of the form `prefix.*` as covering any requested scope that begins with `prefix.`, and MUST NOT treat a requested wildcard as covered by a concrete grant
+- MUST NOT issue a child receipt whose `exp` is later than the parent receipt's `exp`
+- MUST include in every non-root receipt a commitment to the exact bytes of its parent receipt, and MUST verify that commitment when the ancestors are presented
+

@@ -1,0 +1,45 @@
+name: conformance / draft-asor vectors
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'conformance/asor-delegation-chain/**'
+      - '.github/workflows/conformance-asor-vectors.yml'
+  pull_request:
+    paths:
+      - 'conformance/asor-delegation-chain/**'
+      - '.github/workflows/conformance-asor-vectors.yml'
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: protocol
+      - uses: actions/checkout@v4
+        with:
+          repository: cred-ninja/sdk
+          ref: main
+          path: sdk
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install sdk dependencies
+        working-directory: sdk
+        run: npm ci
+      - name: Install runner deps
+        working-directory: protocol/conformance/asor-delegation-chain
+        run: npm install --no-audit --no-fund
+      - name: Run vectors against sdk main
+        working-directory: protocol/conformance/asor-delegation-chain
+        # --allow-gaps stays until the constraint ceiling decision lands.
+        # See sdk docs/design/delegation-constraints.md.
+        run: npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps

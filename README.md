@@ -50,6 +50,7 @@ Section 1.2 of the specification positions the protocol against the WIMSE WG's [
 | [`CONFORMANCE.md`](./CONFORMANCE.md) | Conformance requirements for implementations |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | How to contribute |
 | [`IMPLEMENTATIONS.md`](./IMPLEMENTATIONS.md) | Known implementations |
+| [`conformance/asor-delegation-chain/`](./conformance/asor-delegation-chain/) | Interop runner for the draft-asor-wimse-agent-delegation-chain-00 Appendix B vectors |
 
 ## Reference Implementation
 
