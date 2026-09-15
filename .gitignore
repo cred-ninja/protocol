@@ -1,0 +1,10 @@
+# Local IETF build toolchain
+.venv/
+
+# kramdown-rfc reference cache (auto-fetched from bib.ietf.org at build time)
+.refcache/
+
+# Generated Internet-Draft artifacts (built from the .md source via `make`)
+/draft-*.xml
+/draft-*.txt
+/draft-*.html
