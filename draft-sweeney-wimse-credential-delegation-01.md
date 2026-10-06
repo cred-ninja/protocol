@@ -279,7 +279,8 @@ A Delegation Token is a DPoP-bound JWT [RFC9449] issued by the Delegation Server
 |-------|-------|---------------|
 | `iss` | DS identifier | |
 | `sub` | Subject identifier | User on whose behalf delegation occurs |
-| `act` | `{"sub": "<Agent DID>"}` | Per RFC 8693 §4.1 |
+| `client_id` | Agent DID | Acting agent, per RFC 9068 §2.2 and AIMS §10.3 |
+| `act` | `{"sub": "<Agent DID>"}` | Current actor plus prior-actor history, per RFC 8693 §4.1 |
 | `authorization_details` | Capability array | Per RFC 9396 |
 | `cnf` | `{"jkt": "<DPoP thumbprint>"}` | Per RFC 9449 |
 | `iat` | Issuance time | |
@@ -287,6 +288,8 @@ A Delegation Token is a DPoP-bound JWT [RFC9449] issued by the Delegation Server
 | `jti` | Unique identifier | |
 | `consent_id` | Consent record ID | Traceable to root consent event |
 | `credential_handle` | Opaque string | References Vault entry; MUST NOT be the credential itself |
+
+`client_id` and `act.sub` name the same current actor. `client_id` follows the adopted AIMS §10.3 convention (acting agent in `client_id`, delegating principal in `sub`); `act` adds the RFC 8693 history trail so a verifier can tell the current actor from prior actors without a second claim set. The two MUST agree; a token in which they differ is malformed.
 
 ### 5.2 Capability Structure
 
@@ -432,6 +435,7 @@ This document requests registration of:
 - **[RFC8174]** Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words," BCP 14, RFC 8174, May 2017.
 - **[RFC6749]** Hardt, D., "The OAuth 2.0 Authorization Framework," RFC 6749, October 2012.
 - **[RFC8693]** Jones, M., Nadalin, A., Campbell, B., Bradley, J., Mortimore, C., "OAuth 2.0 Token Exchange," RFC 8693, January 2020.
+- **[RFC9068]** Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens," RFC 9068, October 2021.
 - **[RFC9449]** Fett, D., Campbell, B., Bradley, J., Lodderstedt, T., Jones, M., Waite, D., "OAuth 2.0 Demonstrating Proof of Possession (DPoP)," RFC 9449, September 2023.
 - **[RFC9396]** Lodderstedt, T., Richer, J., Campbell, B., "OAuth 2.0 Rich Authorization Requests," RFC 9396, May 2023.
 - **[RFC7523]** Jones, M., Campbell, B., Mortimore, C., "JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants," RFC 7523, May 2015.
