@@ -38,8 +38,21 @@ jobs:
       - name: Install runner deps
         working-directory: protocol/conformance/asor-delegation-chain
         run: npm install --no-audit --no-fund
+      - name: Record sdk commit under test
+        working-directory: sdk
+        run: |
+          echo "SDK_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "sdk commit: $(git rev-parse HEAD)"
       - name: Run vectors against sdk main
         working-directory: protocol/conformance/asor-delegation-chain
         # --allow-gaps stays until the constraint ceiling decision lands.
         # See sdk docs/design/delegation-constraints.md.
-        run: npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps
+        run: |
+          npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps
+          npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps --json > "run-sdk-${SDK_SHA}.json"
+      - name: Retain run output (sdk commit in the file name)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asor-vectors-sdk-${{ env.SDK_SHA }}
+          path: protocol/conformance/asor-delegation-chain/run-sdk-*.json
+          retention-days: 400

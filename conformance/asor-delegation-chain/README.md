@@ -1,4 +1,4 @@
-# Conformance: draft-asor-wimse-agent-delegation-chain-00 Appendix B vectors
+# Conformance: draft-asor-wimse-agent-delegation-chain Appendix B vectors (v0.9.0, 20 vectors)
 
 Runs the interop vectors published with [draft-asor-wimse-agent-delegation-chain-00](https://datatracker.ietf.org/doc/draft-asor-wimse-agent-delegation-chain/) through Cred's shipping delegation chain logic and prints a pass/fail/gap matrix.
 
@@ -50,9 +50,20 @@ Reason mapping from Cred to the draft: `exp_not_monotonic` to `expired`, `parent
 - FAIL: Cred accepted a chain the vector rejects, rejected one it accepts, or rejected for a different reason. A FAIL is a bug.
 - GAP: Cred accepted a chain the vector rejects because the property being tested is not represented in Cred's model. Three vectors currently GAP: `reject_exceeded_ceiling`, `reject_unsafe_integer` (no JCS/binary64 canonicalization, so out-of-safe-range integers look ordinary), and `reject_duplicate_member` (`JSON.parse` silently resolves a duplicate member to its last value). See `docs/design/delegation-constraints.md` in the sdk repo for the ceiling case.
 
+## Pinned runs
+
+Scores are only citable with the SDK commit they were taken at. Retained machine output lives in `results/`.
+
+| Run date | cred-ninja/sdk commit | Result | Output |
+|---|---|---|---|
+| 2026-09-03 | `4a24376638764ab93fcfbf981ab62635cbb83264` | 17 of 20, 0 FAIL, 3 GAP | `results/2026-09-03-sdk-4a24376.json` (Node 20.20.2) |
+| 2026-10-06 | `ff00421b1a237f20c6de07cc49b33a23e7352181` | 17 of 20, 0 FAIL, 3 GAP | `results/2026-10-06-sdk-ff00421.json` (Node 22.22.0) |
+
+The Oct 6 SDK carries constraint ceilings in receipts and `verifyDelegationChain` enforces asor-01 section 4.3 subsumption, but this runner still does not pass the vectors' `constraints` member through, so `reject_exceeded_ceiling` stays GAP. Passing it through today would fail the valid chains instead: the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank per asor-01 section 4.2, while the SDK's `parseConstraints` accepts only numeric `max` and numeric `rank` and treats everything else as malformed. Closing the ceiling GAP needs the SDK to cover the six asor-01 constraint types (max, min, one_of, not_one_of, prefix, rank over a registered ordering) before the runner maps `constraints` onto `DelegationChainHop.constraints`. Tracked in sdk `docs/protocol-conformance.md`.
+
 ## Current matrix
 
-Against cred-ninja/sdk with wildcard scope subsumption, monotonic child expiry, and `verifyDelegationChain`:
+Against cred-ninja/sdk `4a24376` (2026-09-03) and `ff00421` (2026-10-06), identical rows:
 
 | Vector | Expected | Cred | Result |
 |---|---|---|---|

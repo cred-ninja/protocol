@@ -88,7 +88,7 @@ A resource server that natively supports Cred Protocol:
 
 Cred is scored against the Appendix B interop vectors of draft-asor-wimse-agent-delegation-chain-00, which pin the wire subsumption relation (scope narrowing with prefix wildcards, chain depth, parent commitment linkage, expiry ordering, signature validity) for a chain of Delegation Tokens. The runner, the vendored vectors, the claim mapping, and the current matrix are in [`conformance/asor-delegation-chain/`](conformance/asor-delegation-chain/README.md). It runs in CI against the sdk main branch.
 
-Current standing: 6 of 7. The remaining gap is constraint ceilings, which Cred enforces from server policy at exercise time rather than carrying in the receipt; whether to change that is an open design question documented in the sdk repo.
+Current standing: 17 of 20 against the v0.9.0 vector set, 0 FAIL, 3 GAP, pinned to sdk commits `4a24376` (2026-09-03) and `ff00421` (2026-10-06) with retained output under `conformance/asor-delegation-chain/results/`. The three GAPs are offline-verification properties: constraint ceilings (the sdk now carries ceilings in receipts, but its constraint parser covers only numeric `max` and `rank`, not the six asor-01 section 4.2 types the vectors use, so the runner cannot yet pass `constraints` through), JCS unsafe-integer detection, and duplicate-member detection.
 
 Requirements this adds for a Delegation Server, beyond those above:
 - MUST treat a granted scope of the form `prefix.*` as covering any requested scope that begins with `prefix.`, and MUST NOT treat a requested wildcard as covered by a concrete grant
