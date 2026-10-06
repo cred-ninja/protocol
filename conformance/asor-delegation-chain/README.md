@@ -48,7 +48,7 @@ Reason mapping from Cred to the draft: `exp_not_monotonic` to `expired`, `parent
 
 - PASS: Cred's outcome and reason match the vector's declaration.
 - FAIL: Cred accepted a chain the vector rejects, rejected one it accepts, or rejected for a different reason. A FAIL is a bug.
-- GAP: Cred accepted a chain the vector rejects because the property being tested is not represented in Cred's model. Three vectors currently GAP: `reject_exceeded_ceiling`, `reject_unsafe_integer` (no JCS/binary64 canonicalization, so out-of-safe-range integers look ordinary), and `reject_duplicate_member` (`JSON.parse` silently resolves a duplicate member to its last value). See `docs/design/delegation-constraints.md` in the sdk repo for the ceiling case.
+- GAP: Cred accepted a chain the vector rejects because the property being tested is not represented in Cred's model. Two vectors currently GAP: `reject_unsafe_integer` (no JCS/binary64 canonicalization, so out-of-safe-range integers look ordinary) and `reject_duplicate_member` (`JSON.parse` silently resolves a duplicate member to its last value). `reject_exceeded_ceiling` was a GAP through sdk `ff00421`; see the pinned runs below.
 
 ## Pinned runs
 
@@ -58,12 +58,15 @@ Scores are only citable with the SDK commit they were taken at. Retained machine
 |---|---|---|---|
 | 2026-09-03 | `4a24376638764ab93fcfbf981ab62635cbb83264` | 17 of 20, 0 FAIL, 3 GAP | `results/2026-09-03-sdk-4a24376.json` (Node 20.20.2) |
 | 2026-10-06 | `ff00421b1a237f20c6de07cc49b33a23e7352181` | 17 of 20, 0 FAIL, 3 GAP | `results/2026-10-06-sdk-ff00421.json` (Node 22.22.0) |
+| 2026-10-06 | `e92af1903a5c9bcf1b485ff6cd243c64b718338f` | 18 of 20, 0 FAIL, 2 GAP | `results/2026-10-06-sdk-e92af19.json` (Node 22.22.0) |
 
-The Oct 6 SDK carries constraint ceilings in receipts and `verifyDelegationChain` enforces asor-01 section 4.3 subsumption, but this runner still does not pass the vectors' `constraints` member through, so `reject_exceeded_ceiling` stays GAP. Passing it through today would fail the valid chains instead: the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank per asor-01 section 4.2, while the SDK's `parseConstraints` accepts only numeric `max` and numeric `rank` and treats everything else as malformed. Closing the ceiling GAP needs the SDK to cover the six asor-01 constraint types (max, min, one_of, not_one_of, prefix, rank over a registered ordering) before the runner maps `constraints` onto `DelegationChainHop.constraints`. Tracked in sdk `docs/protocol-conformance.md`.
+The `ff00421` SDK carried constraint ceilings in receipts and enforced asor-01 section 4.3 subsumption, but its `parseConstraints` accepted only numeric `max` and numeric `rank`, while the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank label per section 4.2. Passing `constraints` through would have failed every valid chain, so the runner withheld it and `reject_exceeded_ceiling` stayed GAP. sdk `e92af19` (cred-ninja/sdk PR #41) covers all six section 4.2 types and resolves rank labels through a per-key ordering seeded with the draft's `egress` none < internal < any; the runner now maps `constraints` onto `DelegationChainHop.constraints` and hands the parsed lists to `validateSubDelegation` the way the subdelegate route does. Against an SDK older than `e92af19` the constrained vectors now fail closed as `malformed` at hop 0; that is the correct reading of section 4.2 for an implementation that does not know the `rank` label form.
+
+Spec input for asor -02: `rank` labels carry no ordering on the wire. The draft names one example ordering and the vectors depend on it. Either the constraint-types registry entry for a key carries its ordering, or the token does; the SDK fails closed on any label without a registered ordering.
 
 ## Current matrix
 
-Against cred-ninja/sdk `4a24376` (2026-09-03) and `ff00421` (2026-10-06), identical rows:
+Against cred-ninja/sdk `e92af19` (2026-10-06). The `4a24376` and `ff00421` runs differ only in `reject_exceeded_ceiling` (GAP there):
 
 | Vector | Expected | Cred | Result |
 |---|---|---|---|
@@ -84,16 +87,16 @@ Against cred-ninja/sdk `4a24376` (2026-09-03) and `ff00421` (2026-10-06), identi
 | reject_bare_wildcard.json | malformed | reject:not_narrower | PASS (mapped, see below) |
 | reject_nonterminal_wildcard.json | malformed | reject:not_narrower | PASS (mapped, see below) |
 | reject_non_finite.json | non_finite | reject:payload_undecodable | PASS (mapped, see below) |
-| reject_exceeded_ceiling.json | not_narrower | accept | GAP |
+| reject_exceeded_ceiling.json | not_narrower | reject:not_narrower | PASS |
 | reject_unsafe_integer.json | malformed | accept | GAP |
 | reject_duplicate_member.json | duplicate_member | accept | GAP |
 
-17 of 20, 0 FAIL, 3 GAP.
+18 of 20, 0 FAIL, 2 GAP.
 
 Three PASSes carry a reason-name mismatch worth knowing about, all deliberate:
 - `reject_bare_wildcard.json`, `reject_nonterminal_wildcard.json` declare `malformed`; Cred rejects both, but via scope subsumption (`not_narrower`) rather than a distinct malformed-scope error, because `isValidScope()` in delegation-chain.ts already treats an invalid wildcard as "matches only itself, never covers or is covered by anything else." Recorded per-vector in `VECTOR_REASON_OVERRIDES` in run.ts, not as a blanket reason-map entry, since most `not_narrower` rejections are genuine over-broad-scope vectors whose own declared reason already is `not_narrower`.
 - `reject_non_finite.json` declares `non_finite`; Node's `JSON.parse` itself enforces RFC 8259 (no bare `NaN`/`Infinity`), so the payload fails to decode before it ever reaches the vault. Mapped as `payload_undecodable -> non_finite` in `REASON_MAP`.
 
-The three GAPs are all offline/foreign-token-verification properties Cred's model doesn't represent: `reject_exceeded_ceiling` (constraints live in server policy, see sdk `docs/design/delegation-constraints.md`), `reject_unsafe_integer` (Cred never canonicalizes through JCS/binary64, so an integer at 2**53 looks like an ordinary in-range number), and `reject_duplicate_member` (`JSON.parse` silently keeps the last value of a duplicate member, so Cred's decoder has no way to see the duplicate).
+The two GAPs are JSON canonicalization properties Cred's decoder doesn't represent: `reject_unsafe_integer` (Cred never canonicalizes through JCS/binary64, so an integer at 2**53 looks like an ordinary in-range number), and `reject_duplicate_member` (`JSON.parse` silently keeps the last value of a duplicate member, so Cred's decoder has no way to see the duplicate).
 
 Before the sdk's wildcard-subsumption fix the shipping code scored 1 of 7 on the original vector set: every chain except bad_signature died at hop 1 with `no_scopes_granted` because scope comparison was exact-match and could not narrow `crm.*` to `crm.read`. The runner depends on `verifyDelegationChain`, which did not exist then, so it cannot be pointed at that code; the 1 of 7 figure comes from the original ad hoc harness.

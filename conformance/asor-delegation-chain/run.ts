@@ -41,7 +41,11 @@
  *   authorization_details[0].scopes  scopes
  *   par_hash                         parentHash
  *   iat, exp                         iat, exp
- *   authorization_details[0].constraints   no Cred equivalent (reported as GAP)
+ *   authorization_details[0].constraints   constraints (asor-01 4.2 types;
+ *                                           rank labels resolve through the
+ *                                           SDK's DEFAULT_RANK_ORDERINGS,
+ *                                           which carries the draft's
+ *                                           egress none < internal < any)
  *
  * Reason mapping (Cred to Asor): exp_not_monotonic -> expired,
  * parent_hash_mismatch -> par_hash_mismatch, everything else identical.
@@ -65,6 +69,7 @@ const JSON_OUT = args.includes('--json');
 type VaultApi = {
   verifyDelegationChain: (hops: any[], opts?: any) => any;
   validateSubDelegation: (input: any) => any;
+  parseConstraints?: (value: unknown) => { ok: true; constraints: any[] } | { ok: false; message: string };
   DelegationChainError: any;
 };
 
@@ -117,6 +122,7 @@ const REASON_MAP: Record<string, string> = {
   exp_not_monotonic: 'expired',
   parent_hash_mismatch: 'par_hash_mismatch',
   scope_escalation_denied: 'not_narrower',
+  constraint_escalation_denied: 'not_narrower',
   no_scopes_granted: 'not_narrower',
   depth_exceeded: 'depth_invalid',
   // JSON.parse itself enforces RFC 8259 (no NaN/Infinity literals), so a
@@ -184,6 +190,7 @@ function runVector(file: string, vault: VaultApi): Row {
       scopes: ad.scopes ?? [],
       iat: p.iat,
       exp: p.exp,
+      ...(ad.constraints !== undefined ? { constraints: ad.constraints } : {}),
       signatureValid: hs256Valid(t, secret),
       selfHash: signingInputHash(t),
       ...(typeof p.par_hash === 'string' ? { parentHash: p.par_hash } : {}),
@@ -206,13 +213,25 @@ function runVector(file: string, vault: VaultApi): Row {
   }
 
   // 2. Per-hop issuance-time validation, as the subdelegate route runs it.
+  // The route parses the `constraints` claim off the wire with
+  // parseConstraints before handing it to validateSubDelegation; do the same.
+  // The chain verifier above already rejected malformed constraints, so a
+  // parse failure here cannot happen on a chain that reached this point.
+  const parsed = (value: unknown): any[] | undefined => {
+    if (value === undefined || !vault.parseConstraints) return undefined;
+    const r = vault.parseConstraints(value);
+    return r.ok ? r.constraints : undefined;
+  };
   for (let i = 1; i < hops.length; i++) {
     try {
+      const parentConstraints = parsed(hops[i - 1].constraints);
+      const requestedConstraints = parsed(hops[i].constraints);
       vault.validateSubDelegation({
-        parent: { delegationId: hops[i - 1].delegationId, agentDid: hops[i - 1].agentDid, service: 'attenu', userId: 'default', appClientId: 'local', scopesGranted: hops[i - 1].scopes, chainDepth: hops[i - 1].chainDepth },
+        parent: { delegationId: hops[i - 1].delegationId, agentDid: hops[i - 1].agentDid, service: 'attenu', userId: 'default', appClientId: 'local', scopesGranted: hops[i - 1].scopes, chainDepth: hops[i - 1].chainDepth, ...(parentConstraints ? { constraints: parentConstraints } : {}) },
         childAgentDid: hops[i].agentDid,
         service: 'attenu', userId: 'default', appClientId: 'local',
         requestedScopes: hops[i].scopes,
+        ...(requestedConstraints ? { requestedConstraints } : {}),
         permission: { allowedScopes: hops[i - 1].scopes, delegatable: true, maxDelegationDepth: maxDepth ?? Number.MAX_SAFE_INTEGER },
       });
     } catch (err: any) {
@@ -222,21 +241,10 @@ function runVector(file: string, vault: VaultApi): Row {
     }
   }
 
-  // 3. Things the vector exercises that Cred does not represent.
-  const notes: string[] = [];
-  for (let i = 1; i < payloads.length; i++) {
-    const pc = payloads[i - 1].authorization_details?.[0]?.constraints ?? [];
-    const cc = payloads[i].authorization_details?.[0]?.constraints ?? [];
-    for (const c of pc) {
-      const childC = cc.find((x: any) => x.key === c.key);
-      if (childC && typeof c.max === 'number' && typeof childC.max === 'number' && childC.max > c.max) {
-        notes.push(`hop ${i}: constraint ${c.key} loosened ${c.max} to ${childC.max}; Cred receipts carry no constraint ceilings (see sdk docs/design/delegation-constraints.md)`);
-      }
-    }
-  }
-
+  // 3. Accepted. Anything the vector declares as a rejection from here on
+  // is a property Cred does not represent.
   if (expect === 'accept') return { vector: file, expect, cred: 'accept', result: 'PASS', note: '' };
-  return { vector: file, expect, cred: 'accept', result: 'GAP', note: notes.join(' | ') || 'accepted; declared rejection reason not represented in Cred' };
+  return { vector: file, expect, cred: 'accept', result: 'GAP', note: 'accepted; declared rejection reason not represented in Cred' };
 }
 
 const { api, source } = await loadVault();
