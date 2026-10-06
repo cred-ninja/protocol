@@ -63,7 +63,9 @@ The IETF landscape for agent authorization moved quickly during 2026. The OAuth 
 
 **draft-ietf-oauth-identity-chaining** [OAUTH-CHAINING]: Approved for publication in 2026. Chains identity and authorization across trust domains by exchanging a token in one domain for a JWT assertion accepted in another. It preserves identity across hops but does not constrain what each hop may do. This protocol adds structural attenuation and receipt-based chain verification on the same RFC 8693 substrate. The two compose.
 
-**draft-niyikiza-oauth-attenuating-agent-tokens** [AAT]: Defines tokens a holder can attenuate offline, in the macaroon tradition. Same goal as Section 5.3, different trust model: AAT verification relies on the root issuer key and offline derivation, while this protocol keeps the Delegation Server in the loop at every hop in exchange for synchronous revocation (Section 7) and server-checked strict-subset validation.
+**draft-niyikiza-oauth-attenuating-agent-tokens** [AAT]: Defines tokens a holder can attenuate offline, in the macaroon tradition. Same goal as Section 5.4, different trust model: AAT verification relies on the root issuer key and offline derivation, while this protocol keeps the Delegation Server in the loop at every hop in exchange for synchronous revocation (Section 7) and server-checked strict-subset validation.
+
+**draft-asor-wimse-agent-delegation-chain** [ASOR]: Defines an offline-verifiable Delegation Chain of RFC 9068 JWTs, each committing to its parent's signing input by hash, carrying authority as an RFC 9396 `agent_delegation` detail with a wildcard scope grammar and a typed constraint vocabulary (§4.2 of that draft), and verified by a deterministic algorithm with no call to an authorization server. This protocol is the server-side counterpart: the Delegation Server is in the loop at every hop and holds the credentials, so revocation is synchronous and aggregate budgets have a single writer, while a receipt chain verified offline still proves scope narrowing, depth, linkage, expiry ordering, and, with Section 5.3, ceiling narrowing. The two share the constraint vocabulary so that a chain minted by either can be checked by a verifier written for the other; Cred's reference implementation is run against the Asor interop vectors as part of its conformance suite.
 
 **draft-gco-oauth-delegate-sd-jwt** [DELEGATE-SD-JWT]: Delegates SD-JWT credentials holder-to-holder by allowing a Key Binding JWT to act as an SD-JWT. It operates at the credential format layer; this protocol operates at the delegation service layer. A DS could issue capability attestations as Delegate SD-JWTs without changing the mechanics defined here.
 
@@ -83,7 +85,7 @@ The IETF landscape for agent authorization moved quickly during 2026. The OAuth 
 
 **draft-yossif-agent-mandate-problem** [MANDATE-PS]: A problem statement on verifiable human mandates: intent authorized at one time, executed autonomously later. The consent records (Section 8) and capability constraints defined here are a concrete answer to part of that problem space.
 
-**draft-nelson-agent-delegation-receipts** [DELEG-RECEIPTS]: Defines user-signed delegation receipts anchored to an append-only log before an agent acts, removing the operator as a trusted intermediary. The `prf` receipts in Section 5.3 are DS-signed and bind hops within a chain; Nelson's receipts are user-signed and bind the user's instruction to the run. They answer different trust questions and can coexist.
+**draft-nelson-agent-delegation-receipts** [DELEG-RECEIPTS]: Defines user-signed delegation receipts anchored to an append-only log before an agent acts, removing the operator as a trusted intermediary. The `prf` receipts in Section 5.4 are DS-signed and bind hops within a chain; Nelson's receipts are user-signed and bind the user's instruction to the run. They answer different trust questions and can coexist.
 
 **draft-nennemann-wimse-ect** [ECT]: Execution Context Tokens define an audit record format. This protocol's audit chain is designed to be ECT-compatible.
 
@@ -265,7 +267,7 @@ Agents SHOULD generate a new key pair per session. The DS MAY require Subject pr
 
 Workload Authorization Grant [WAG] supplies the provisioning layer: a platform-signed RFC 7523 grant identifies a workload to an authorization server that trusts the platform. Its on-behalf-of delegation composition slot is addressed by this document's subject consent, capability attenuation, and signed delegation receipts; WAG does not supply those properties itself.
 
-A WAG assertion is presented to an authorization server's token endpoint, not to the DS. A WAG-provisioned workload therefore authenticates to the DS as any other Agent, per Section 4.2, and `act.sub` in its Delegation Tokens remains the Agent DID. The WAG Agent Identifier is source identity evidence about that Agent, not a replacement for its DID. When a deployment links the two, the DS records in the delegation receipt (Section 5.3) the WAG assertion's issuer, the Agent Identifier, and, where several Platforms share one issuer identifier, the registration-distinguishing claim name and value described in Section 6.3 of draft-carleton-workload-authz-grant-01. Section 6.1 of that draft requires `sub` and `jti` to be interpreted only within the matched Platform registration, so the DS MUST NOT equate bare Agent Identifiers from different registrations, and a downstream verifier MUST have a trusted mapping from the recorded issuer and registration context to the actor identity; a platform-local identifier is not globally resolvable. A deployment that surfaces the WAG identity inside a token MAY carry it as `iss` and `sub` members of `act`, which RFC 8693 Section 4.1 allows for identifying an actor, while the outer `sub` remains the delegated principal.
+A WAG assertion is presented to an authorization server's token endpoint, not to the DS. A WAG-provisioned workload therefore authenticates to the DS as any other Agent, per Section 4.2, and `act.sub` in its Delegation Tokens remains the Agent DID. The WAG Agent Identifier is source identity evidence about that Agent, not a replacement for its DID. When a deployment links the two, the DS records in the delegation receipt (Section 5.4) the WAG assertion's issuer, the Agent Identifier, and, where several Platforms share one issuer identifier, the registration-distinguishing claim name and value described in Section 6.3 of draft-carleton-workload-authz-grant-01. Section 6.1 of that draft requires `sub` and `jti` to be interpreted only within the matched Platform registration, so the DS MUST NOT equate bare Agent Identifiers from different registrations, and a downstream verifier MUST have a trusted mapping from the recorded issuer and registration context to the actor identity; a platform-local identifier is not globally resolvable. A deployment that surfaces the WAG identity inside a token MAY carry it as `iss` and `sub` members of `act`, which RFC 8693 Section 4.1 allows for identifying an actor, while the outer `sub` remains the delegated principal.
 
 The WAG assertion is a bearer credential, and WAG leaves proof of possession open (Section 8 of that draft). The DS MUST NOT treat WAG-asserted identity as proof that the presenting party controls the workload's key; sender constraint comes from the Delegation Token's DPoP binding (Section 4.2). WAG actor identity MUST NOT be treated as user consent or as permission to re-delegate.
 
@@ -282,6 +284,7 @@ A Delegation Token is a DPoP-bound JWT [RFC9449] issued by the Delegation Server
 | `client_id` | Agent DID | Acting agent, per RFC 9068 §2.2 and AIMS §10.3 |
 | `act` | `{"sub": "<Agent DID>"}` | Current actor plus prior-actor history, per RFC 8693 §4.1 |
 | `authorization_details` | Capability array | Per RFC 9396 |
+| `constraints` | Ceiling array | Per-key ceilings in the [ASOR] §4.2 shape; see Section 5.3. OPTIONAL on a root token; REQUIRED on a child whose parent carries any |
 | `cnf` | `{"jkt": "<DPoP thumbprint>"}` | Per RFC 9449 |
 | `iat` | Issuance time | |
 | `exp` | Expiry time | Max 1 hour; 15 minutes RECOMMENDED |
@@ -301,17 +304,42 @@ Capabilities are expressed as RFC 9396 `authorization_details` objects:
   "provider": "google",
   "operations": ["drive.files.get", "drive.files.list"],
   "resources": ["folder:abc123"],
-  "constraints": {
-    "expires": "2026-07-28T22:00:00Z",
-    "max_calls": 10,
-    "max_response_size": "10MB"
-  }
+  "expires": "2026-07-28T22:00:00Z"
 }
 ```
 
 The DS MUST validate that capabilities in a sub-delegation request are a subset of the parent DT's capabilities, equal or narrower, never wider. Validation is the DS's responsibility, not the requesting agent's.
 
-### 5.3 Delegation Chain Integrity
+Numeric and enumerated bounds on how a capability may be exercised are not part of the capability object. They are carried in the token's `constraints` claim (Section 5.3) so that a verifier holding only the chain can check that they narrow hop by hop.
+
+### 5.3 Constraint Ceilings
+
+A Delegation Token MAY carry a `constraints` claim: an array of objects, each with a REQUIRED `key` naming the constrained dimension and exactly one typed constraint value. The shape and the type vocabulary are those of §4.2 of [ASOR], so that a Cred receipt chain and an Asor Delegation Chain can be checked by the same subsumption code:
+
+- `max` (number): the quantity MUST NOT exceed it.
+- `min` (number): the quantity MUST NOT be less than it.
+- `one_of` (array): the value MUST be a member.
+- `not_one_of` (array): the value MUST NOT be a member.
+- `prefix` (string): the value MUST have it as a prefix.
+- `rank` (number or label): position in an ordered enumeration; the value's rank MUST NOT exceed the constraint's.
+
+```json
+"constraints": [
+  { "key": "max_rows", "max": 5000 },
+  { "key": "region", "one_of": ["us", "eu"] },
+  { "key": "egress", "rank": "none" }
+]
+```
+
+Parsing is fail-closed. An entry with no type member, more than one, a type the DS does not recognize, a malformed value, or a `key` repeated within the array makes the whole claim malformed, and a token with a malformed `constraints` claim is invalid before any subsumption is evaluated. A verifier that encounters an unknown constraint type MUST treat the action as denied, never as unconstrained.
+
+Subsumption follows §4.3 of [ASOR]: for every constraint in the parent, the child MUST carry a constraint under the same `key` and the same type whose admissible set is a subset of the parent's (`max` no greater, `min` no smaller, `one_of` a subset, `not_one_of` a superset, `prefix` extending the parent's prefix, `rank` no higher). A constraint present in the parent and absent from the child means the child is unbounded on that dimension, which is wider, and the DS MUST refuse to issue the child. The child MAY add constraints the parent does not carry. When a sub-delegation request omits `constraints`, the DS inherits the parent's ceilings into the child unchanged.
+
+Labels used with `rank` have no ordering on the wire. [ASOR] names one example ordering (`egress`: `none` < `internal` < `any`) and its interop vectors depend on it, but neither the token nor the proposed constraint-types registry carries an ordering for a key. A DS MUST hold a registered ordering for every `rank` label it mints, and MUST reject a delegation request whose `rank` label it cannot order rather than issue a token no later hop can compare. A verifier that encounters a label with no registered ordering MUST fail closed. The ordering gap is raised with the [ASOR] author as input to that draft's next revision.
+
+Ceilings in `constraints` bound each exercise of the capability and are checked offline by any holder of the chain. Lifetime aggregates, such as a count of calls measured across a delegation's whole life, are not expressible as a per-hop ceiling: two holders of the same chain cannot both decrement a counter correctly without a shared writer. The DS is that writer (Section 6.1); the `constraints` claim carries the bound, the DS does the debit.
+
+### 5.4 Delegation Chain Integrity
 
 To address the delegation chain splicing vulnerability in RFC 8693 §2.1-2.2, each delegation hop MUST produce a signed delegation receipt containing: the parent DT's `jti`, the child DT's `jti`, the delegating agent's DID, the receiving agent's DID, the root delegated subject (the outer `sub`), the attenuated capability set, and any source identity evidence recorded for the receiving agent (see Section 4.4). The receipt is signed by the DS and included in the child DT as the `prf` claim (an array of receipt content identifiers). Chain verification traces `prf` links back to the root consent event.
 
@@ -319,7 +347,7 @@ To address the delegation chain splicing vulnerability in RFC 8693 §2.1-2.2, ea
 
 At every hop, the DS MUST re-verify the parent token and its signed receipt chain, including issuer trust, signatures, expiry, DPoP binding, and revocation state, before issuing a child. It MUST establish that the delegator currently holds the authority being delegated and is allowed to delegate it. Signed provenance alone does not establish either condition. If a required authority or freshness check cannot be completed, the DS MUST NOT issue or exercise the child on the basis of that unresolved input.
 
-Authority MUST narrow monotonically: the child's operations and resources MUST be contained in the parent's effective authority, and its constraints MUST be at least as restrictive. Containment is the per-hop admission check. Where independent policies constrain the same action, their intersection MUST be order-independent; an unrecognized or unevaluable constraint MUST NOT be silently discarded. A child's lifetime MUST NOT exceed the remaining lifetime of the parent or the applicable consent grant.
+Authority MUST narrow monotonically: the child's operations and resources MUST be contained in the parent's effective authority, and its constraint ceilings MUST subsume per Section 5.3. Containment is the per-hop admission check. Where independent policies constrain the same action, their intersection MUST be order-independent; an unrecognized or unevaluable constraint MUST NOT be silently discarded. A child's lifetime MUST NOT exceed the remaining lifetime of the parent or the applicable consent grant.
 
 For this on-behalf-of delegation profile, each child MUST preserve the root delegated subject in outer `sub` and name the receiving, current actor in `act.sub`. Prior actors MAY be represented using nested `act` as defined in RFC 8693 Section 4.1. Nested actors provide historical attribution only and MUST NOT be used independently to authorize an action. The DS's signed receipts MUST bind the subject and current actor attribution to the parent and child token identifiers and the effective capability set. The `act` claim is the attribution carrier, not proof of authority or a replacement for signed receipts.
 
@@ -451,6 +479,7 @@ This document requests registration of:
 - **[WAG]** Carleton, P., Ed., Steele, N., Parecki, A., Schwenkschuster, A., Campbell, B., "Workload Authorization Grant," draft-carleton-workload-authz-grant-01, September 2026 (work in progress).
 - **[AIMS]** Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B., Steele, N., Parecki, A., "AI Identity Management System," draft-ietf-wimse-aims-00, September 2026.
 - **[OAUTH-CHAINING]** "OAuth Identity and Authorization Chaining Across Domains," draft-ietf-oauth-identity-chaining-15, IETF OAuth Working Group, June 2026 (approved for publication).
+- **[ASOR]** Asor, R., "Verifiable Attenuated Delegation for AI Agent Chains," draft-asor-wimse-agent-delegation-chain-01, September 2026.
 - **[AAT]** Aimable, N., "Attenuating Authorization Tokens for Agentic Delegation Chains," draft-niyikiza-oauth-attenuating-agent-tokens-01, June 2026.
 - **[DELEGATE-SD-JWT]** Oliver, G., "Delegate SD-JWT," draft-gco-oauth-delegate-sd-jwt-00, April 2026.
 - **[ASYNC-DELEG]** Zhu, L., "Delegated Refresh Tokens for OAuth 2.0 Token Exchange," draft-zhu-oauth-async-delegation-04, July 2026.
