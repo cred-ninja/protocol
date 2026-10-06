@@ -46,7 +46,9 @@ Section 1.2 of the specification positions the protocol against the WIMSE WG's [
 
 | File | Description |
 |------|-------------|
-| [`draft-sweeney-wimse-credential-delegation-00.md`](./draft-sweeney-wimse-credential-delegation-00.md) | Full protocol specification |
+| [`draft-sweeney-wimse-credential-delegation-01.md`](./draft-sweeney-wimse-credential-delegation-01.md) | Full protocol specification, prepared -01 (readable rendering of `ietf/draft-sweeney-wimse-credential-delegation-01.mkd`) |
+| [`draft-sweeney-wimse-credential-delegation-00.md`](./draft-sweeney-wimse-credential-delegation-00.md) | Filed -00, kept for reference |
+| [`ietf/`](./ietf/) | kramdown-rfc source of truth (`.mkd`), generated XML and text; see `ietf/README.md` |
 | [`CONFORMANCE.md`](./CONFORMANCE.md) | Conformance requirements for implementations |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | How to contribute |
 | [`IMPLEMENTATIONS.md`](./IMPLEMENTATIONS.md) | Known implementations |

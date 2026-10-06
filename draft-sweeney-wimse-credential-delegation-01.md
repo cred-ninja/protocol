@@ -1,8 +1,8 @@
 # Credential Delegation Protocol for AI Agents in Multi-System Environments
 
-**Internet-Draft:** draft-sweeney-wimse-credential-delegation-01
-**Date:** 2026-10-06
-**Intended Status:** Standards Track
+**Internet-Draft:** draft-sweeney-wimse-credential-delegation-01  
+**Date:** 2026-10-06  
+**Intended Status:** Standards Track  
 **Target WG:** IETF WIMSE WG / OAuth WG
 
 ---
@@ -265,7 +265,9 @@ Agents SHOULD generate a new key pair per session. The DS MAY require Subject pr
 
 Workload Authorization Grant [WAG] supplies the provisioning layer: a platform-signed RFC 7523 grant identifies a workload to an authorization server that trusts the platform. Its on-behalf-of delegation composition slot is addressed by this document's subject consent, capability attenuation, and signed delegation receipts; WAG does not supply those properties itself.
 
-A WAG Agent Identifier is a natural value for `act.sub` when that workload is the current actor. Section 6.1 of draft-carleton-workload-authz-grant-01 requires `sub` and `jti` to be interpreted within the matched Platform registration. The DS MUST retain and authenticate the source issuer and any partition discriminator needed to identify that registration in the receipt's identity evidence, and MUST NOT equate bare identifiers from different registrations. A downstream verifier MUST have a trusted mapping from that evidence to the actor identity; copying a platform-local identifier does not make it globally resolvable. These fields describe source identity evidence, not newly registered JWT claims. The outer `sub` remains the delegated principal, not the WAG workload subject. WAG actor identity MUST NOT be treated as user consent or as permission to re-delegate.
+A WAG assertion is presented to an authorization server's token endpoint, not to the DS. A WAG-provisioned workload therefore authenticates to the DS as any other Agent, per Section 4.2, and `act.sub` in its Delegation Tokens remains the Agent DID. The WAG Agent Identifier is source identity evidence about that Agent, not a replacement for its DID. When a deployment links the two, the DS records in the delegation receipt (Section 5.3) the WAG assertion's issuer, the Agent Identifier, and, where several Platforms share one issuer identifier, the registration-distinguishing claim name and value described in Section 6.3 of draft-carleton-workload-authz-grant-01. Section 6.1 of that draft requires `sub` and `jti` to be interpreted only within the matched Platform registration, so the DS MUST NOT equate bare Agent Identifiers from different registrations, and a downstream verifier MUST have a trusted mapping from the recorded issuer and registration context to the actor identity; a platform-local identifier is not globally resolvable. A deployment that surfaces the WAG identity inside a token MAY carry it as `iss` and `sub` members of `act`, which RFC 8693 Section 4.1 allows for identifying an actor, while the outer `sub` remains the delegated principal.
+
+The WAG assertion is a bearer credential, and WAG leaves proof of possession open (Section 8 of that draft). The DS MUST NOT treat WAG-asserted identity as proof that the presenting party controls the workload's key; sender constraint comes from the Delegation Token's DPoP binding (Section 4.2). WAG actor identity MUST NOT be treated as user consent or as permission to re-delegate.
 
 ## 5. Delegation Token Format
 
@@ -304,11 +306,11 @@ Capabilities are expressed as RFC 9396 `authorization_details` objects:
 }
 ```
 
-The DS MUST validate that capabilities in a sub-delegation request are a strict subset of the parent DT's capabilities. Validation is the DS's responsibility, not the requesting agent's.
+The DS MUST validate that capabilities in a sub-delegation request are a subset of the parent DT's capabilities, equal or narrower, never wider. Validation is the DS's responsibility, not the requesting agent's.
 
 ### 5.3 Delegation Chain Integrity
 
-To address the delegation chain splicing vulnerability in RFC 8693 §2.1-2.2, each delegation hop MUST produce a signed delegation receipt containing: the parent DT's `jti`, the child DT's `jti`, the delegating agent's DID, the receiving agent's DID, and the attenuated capability set. The receipt is signed by the DS and included in the child DT as the `prf` claim (an array of receipt content identifiers). Chain verification traces `prf` links back to the root consent event.
+To address the delegation chain splicing vulnerability in RFC 8693 §2.1-2.2, each delegation hop MUST produce a signed delegation receipt containing: the parent DT's `jti`, the child DT's `jti`, the delegating agent's DID, the receiving agent's DID, the root delegated subject (the outer `sub`), the attenuated capability set, and any source identity evidence recorded for the receiving agent (see Section 4.4). The receipt is signed by the DS and included in the child DT as the `prf` claim (an array of receipt content identifiers). Chain verification traces `prf` links back to the root consent event.
 
 ---
 
@@ -318,7 +320,7 @@ Authority MUST narrow monotonically: the child's operations and resources MUST b
 
 For this on-behalf-of delegation profile, each child MUST preserve the root delegated subject in outer `sub` and name the receiving, current actor in `act.sub`. Prior actors MAY be represented using nested `act` as defined in RFC 8693 Section 4.1. Nested actors provide historical attribution only and MUST NOT be used independently to authorize an action. The DS's signed receipts MUST bind the subject and current actor attribution to the parent and child token identifiers and the effective capability set. The `act` claim is the attribution carrier, not proof of authority or a replacement for signed receipts.
 
-Each hop's decision record MUST identify the receipt links, evaluated grant and policy inputs, their as-of times and validity horizons, the decision, and any failed or unresolved check with a reason. A verifier MUST have authenticated evidence sufficient to reconstruct the chain to root consent, including the per-hop authority narrowing and subject/actor bindings; raw upstream credentials need not be forwarded. A valid receipt chain does not establish that issuer standing or consent remains current. Required freshness and revocation checks remain separate from chain reconstruction.
+The DS SHOULD keep, for each hop, an audit record distinct from the receipt that identifies the receipt links, the grant and policy inputs evaluated, their as-of times and validity horizons, the decision, and any failed or unresolved check with a reason. The shape of that record is deployment-defined; verifier-side companion work may standardize it. A verifier MUST have authenticated evidence sufficient to reconstruct the chain to root consent, including the per-hop authority narrowing and subject/actor bindings; raw upstream credentials need not be forwarded. A valid receipt chain does not establish that issuer standing or consent remains current. Required freshness and revocation checks remain separate from chain reconstruction.
 
 ## 6. Credential Wrapping
 
@@ -442,8 +444,8 @@ This document requests registration of:
 - **[UCAN-SPEC]** Zelenka, B., et al., "UCAN Delegation," ucan-wg/delegation, RC v1.0.
 - **[CONFUSED-DEPUTY]** Hardy, N., "The Confused Deputy (or Why Capabilities Might Have Been Invented)," ACM SIGOPS Operating Systems Review, 1988.
 - **[MILLER-2006]** Miller, M.S., "Robust Composition: Towards a Unified Approach to Access Control and Concurrency Control," PhD thesis, Johns Hopkins University, 2006.
-- **[WAG]** Carleton, P., Steele, N., Parecki, A., Schwenkschuster, A., Campbell, B., "Workload Authorization Grant," draft-carleton-workload-authz-grant-01, September 2026 (work in progress).
-- **[AIMS]** Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B., Steele, N., "AI Identity Management System," draft-ietf-wimse-aims-00, September 2026.
+- **[WAG]** Carleton, P., Ed., Steele, N., Parecki, A., Schwenkschuster, A., Campbell, B., "Workload Authorization Grant," draft-carleton-workload-authz-grant-01, September 2026 (work in progress).
+- **[AIMS]** Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B., Steele, N., Parecki, A., "AI Identity Management System," draft-ietf-wimse-aims-00, September 2026.
 - **[OAUTH-CHAINING]** "OAuth Identity and Authorization Chaining Across Domains," draft-ietf-oauth-identity-chaining-15, IETF OAuth Working Group, June 2026 (approved for publication).
 - **[AAT]** Aimable, N., "Attenuating Authorization Tokens for Agentic Delegation Chains," draft-niyikiza-oauth-attenuating-agent-tokens-01, June 2026.
 - **[DELEGATE-SD-JWT]** Oliver, G., "Delegate SD-JWT," draft-gco-oauth-delegate-sd-jwt-00, April 2026.
