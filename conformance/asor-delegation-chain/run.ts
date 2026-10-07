@@ -41,7 +41,11 @@
  *   authorization_details[0].scopes  scopes
  *   par_hash                         parentHash
  *   iat, exp                         iat, exp
- *   authorization_details[0].constraints   no Cred equivalent (reported as GAP)
+ *   authorization_details[0].constraints   constraints (asor-01 4.2 types;
+ *                                           rank labels resolve through the
+ *                                           SDK's DEFAULT_RANK_ORDERINGS,
+ *                                           which carries the draft's
+ *                                           egress none < internal < any)
  *
  * Reason mapping (Cred to Asor): exp_not_monotonic -> expired,
  * parent_hash_mismatch -> par_hash_mismatch, everything else identical.
@@ -65,8 +69,12 @@ const JSON_OUT = args.includes('--json');
 type VaultApi = {
   verifyDelegationChain: (hops: any[], opts?: any) => any;
   validateSubDelegation: (input: any) => any;
+  parseConstraints?: (value: unknown) => { ok: true; constraints: any[] } | { ok: false; message: string };
+  parseStrictJson?: (text: string) => unknown;
+  StrictJsonError?: any;
   DelegationChainError: any;
 };
+let vaultForDecode: VaultApi | null = null;
 
 async function loadVault(): Promise<{ api: VaultApi; source: string }> {
   const candidates = [flag('--sdk'), process.env.CRED_SDK_PATH, resolve(here, '../../../sdk')].filter(Boolean) as string[];
@@ -101,15 +109,21 @@ function hs256Valid(token: string, secret: Buffer): boolean {
 }
 function payloadOf(token: string): any {
   // Some adversarial vectors carry payload bytes that are valid base64url but
-  // not valid JSON (e.g. a bare `NaN` literal, which RFC 8259 disallows).
-  // That is itself a real-world rejection signal -- Cred's receipt decoder
-  // would refuse the token before it ever reaches the vault -- so we catch it
-  // here rather than letting it crash the runner, and report it as its own
-  // pseudo-reason so runVector can classify it like any other rejection.
+  // not valid JSON (e.g. a bare `NaN` literal, which RFC 8259 disallows), or
+  // JSON that RFC 8259 leaves open and JCS forbids (a duplicate member, an
+  // integer outside the binary64 exact range). Cred's receipt decoder uses
+  // the vault's strict parser (parseStrictJson) and refuses such a token
+  // before it ever reaches the chain verifier, so we decode the same way
+  // here and report the failure as a pseudo-reason runVector can classify.
+  // When the sdk under test predates parseStrictJson, fall back to
+  // JSON.parse, which makes duplicate_member and unsafe_integer GAPs.
+  const text = b64urlDecode(token.split('.')[1]).toString('utf8');
   try {
-    return JSON.parse(b64urlDecode(token.split('.')[1]).toString('utf8'));
+    if (vaultForDecode?.parseStrictJson) return vaultForDecode.parseStrictJson(text);
+    return JSON.parse(text);
   } catch (err: any) {
-    return { __decodeError: err?.message ?? String(err) };
+    const code = vaultForDecode?.StrictJsonError && err instanceof vaultForDecode.StrictJsonError ? err.code : 'syntax';
+    return { __decodeError: err?.message ?? String(err), __decodeCode: code };
   }
 }
 
@@ -117,6 +131,7 @@ const REASON_MAP: Record<string, string> = {
   exp_not_monotonic: 'expired',
   parent_hash_mismatch: 'par_hash_mismatch',
   scope_escalation_denied: 'not_narrower',
+  constraint_escalation_denied: 'not_narrower',
   no_scopes_granted: 'not_narrower',
   depth_exceeded: 'depth_invalid',
   // JSON.parse itself enforces RFC 8259 (no NaN/Infinity literals), so a
@@ -124,6 +139,11 @@ const REASON_MAP: Record<string, string> = {
   // what the draft calls non_finite, just one layer earlier than a vault
   // reason code.
   payload_undecodable: 'non_finite',
+  // Strict-JSON rejections from the vault's parseStrictJson, surfaced by
+  // payloadOf. duplicate_member maps to the draft's own reason; an integer
+  // outside the binary64 exact range is what the vectors call malformed.
+  duplicate_member: 'duplicate_member',
+  unsafe_integer: 'malformed',
 };
 
 /**
@@ -162,13 +182,15 @@ function runVector(file: string, vault: VaultApi): Row {
   const payloads = tokens.map(payloadOf);
   const badPayloadIndex = payloads.findIndex((p) => p && typeof p.__decodeError === 'string');
   if (badPayloadIndex !== -1) {
-    const mapped = REASON_MAP['payload_undecodable'] ?? 'payload_undecodable';
+    const code: string = payloads[badPayloadIndex].__decodeCode ?? 'syntax';
+    const credReason = code === 'syntax' ? 'payload_undecodable' : code;
+    const mapped = REASON_MAP[credReason] ?? credReason;
     return {
       vector: file,
       expect,
-      cred: 'reject:payload_undecodable',
+      cred: `reject:${credReason}`,
       result: mapped === expect ? 'PASS' : 'FAIL',
-      note: `hop ${badPayloadIndex}: payload did not parse as JSON (${payloads[badPayloadIndex].__decodeError})`,
+      note: `hop ${badPayloadIndex}: payload rejected by the strict decoder (${payloads[badPayloadIndex].__decodeError})`,
     };
   }
   const root = payloads[0];
@@ -184,6 +206,7 @@ function runVector(file: string, vault: VaultApi): Row {
       scopes: ad.scopes ?? [],
       iat: p.iat,
       exp: p.exp,
+      ...(ad.constraints !== undefined ? { constraints: ad.constraints } : {}),
       signatureValid: hs256Valid(t, secret),
       selfHash: signingInputHash(t),
       ...(typeof p.par_hash === 'string' ? { parentHash: p.par_hash } : {}),
@@ -206,13 +229,25 @@ function runVector(file: string, vault: VaultApi): Row {
   }
 
   // 2. Per-hop issuance-time validation, as the subdelegate route runs it.
+  // The route parses the `constraints` claim off the wire with
+  // parseConstraints before handing it to validateSubDelegation; do the same.
+  // The chain verifier above already rejected malformed constraints, so a
+  // parse failure here cannot happen on a chain that reached this point.
+  const parsed = (value: unknown): any[] | undefined => {
+    if (value === undefined || !vault.parseConstraints) return undefined;
+    const r = vault.parseConstraints(value);
+    return r.ok ? r.constraints : undefined;
+  };
   for (let i = 1; i < hops.length; i++) {
     try {
+      const parentConstraints = parsed(hops[i - 1].constraints);
+      const requestedConstraints = parsed(hops[i].constraints);
       vault.validateSubDelegation({
-        parent: { delegationId: hops[i - 1].delegationId, agentDid: hops[i - 1].agentDid, service: 'attenu', userId: 'default', appClientId: 'local', scopesGranted: hops[i - 1].scopes, chainDepth: hops[i - 1].chainDepth },
+        parent: { delegationId: hops[i - 1].delegationId, agentDid: hops[i - 1].agentDid, service: 'attenu', userId: 'default', appClientId: 'local', scopesGranted: hops[i - 1].scopes, chainDepth: hops[i - 1].chainDepth, ...(parentConstraints ? { constraints: parentConstraints } : {}) },
         childAgentDid: hops[i].agentDid,
         service: 'attenu', userId: 'default', appClientId: 'local',
         requestedScopes: hops[i].scopes,
+        ...(requestedConstraints ? { requestedConstraints } : {}),
         permission: { allowedScopes: hops[i - 1].scopes, delegatable: true, maxDelegationDepth: maxDepth ?? Number.MAX_SAFE_INTEGER },
       });
     } catch (err: any) {
@@ -222,24 +257,14 @@ function runVector(file: string, vault: VaultApi): Row {
     }
   }
 
-  // 3. Things the vector exercises that Cred does not represent.
-  const notes: string[] = [];
-  for (let i = 1; i < payloads.length; i++) {
-    const pc = payloads[i - 1].authorization_details?.[0]?.constraints ?? [];
-    const cc = payloads[i].authorization_details?.[0]?.constraints ?? [];
-    for (const c of pc) {
-      const childC = cc.find((x: any) => x.key === c.key);
-      if (childC && typeof c.max === 'number' && typeof childC.max === 'number' && childC.max > c.max) {
-        notes.push(`hop ${i}: constraint ${c.key} loosened ${c.max} to ${childC.max}; Cred receipts carry no constraint ceilings (see sdk docs/design/delegation-constraints.md)`);
-      }
-    }
-  }
-
+  // 3. Accepted. Anything the vector declares as a rejection from here on
+  // is a property Cred does not represent.
   if (expect === 'accept') return { vector: file, expect, cred: 'accept', result: 'PASS', note: '' };
-  return { vector: file, expect, cred: 'accept', result: 'GAP', note: notes.join(' | ') || 'accepted; declared rejection reason not represented in Cred' };
+  return { vector: file, expect, cred: 'accept', result: 'GAP', note: 'accepted; declared rejection reason not represented in Cred' };
 }
 
 const { api, source } = await loadVault();
+vaultForDecode = api;
 const files = readdirSync(VECTOR_DIR).filter((f) => f.endsWith('.json')).sort((a, b) => (a.startsWith('valid') ? -1 : b.startsWith('valid') ? 1 : a.localeCompare(b)));
 const rows = files.map((f) => runVector(f, api));
 const pass = rows.filter((r) => r.result === 'PASS').length;

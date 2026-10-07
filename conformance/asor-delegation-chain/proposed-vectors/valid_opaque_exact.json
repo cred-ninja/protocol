@@ -1,0 +1,14 @@
+{
+  "description": "Scope classes: the root grants two provider-native opaque scopes, 'User.Read' and 'repo:status'; the child requests 'repo:status' byte for byte. Opaque scopes narrow by exact equality. MUST be accepted; under -01 Section 4.1 as written both tokens are malformed, which is the interop gap the opaque class closes.",
+  "expect": "accept",
+  "now": 0,
+  "signer": {
+    "alg": "HS256",
+    "kid": "interop-v1",
+    "secret_hex": "617474656e752d67756172642d696e7465726f702d766563746f72732d76312d66697865642d736563726574"
+  },
+  "tokens": [
+    "eyJhbGciOiJIUzI1NiIsImMxNG4iOiJKQ1MiLCJraWQiOiJpbnRlcm9wLXYxIiwidHlwIjoiYXQrand0In0.eyJhdWQiOm51bGwsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3siY29uc3RyYWludHMiOltdLCJzY29wZXMiOlsiVXNlci5SZWFkIiwicmVwbzpzdGF0dXMiXSwidHlwZSI6ImFnZW50X2RlbGVnYXRpb24ifV0sImRlbF9kZXB0aCI6MCwiZGVsX21heF9kZXB0aCI6MiwiZXhwIjozNjAwLCJpYXQiOjAsImlzcyI6ImF0dGVudS1ndWFyZCIsImp0aSI6ImNoYWluOm4wIiwic3ViIjoib3JjaGVzdHJhdG9yIn0.zpwS2m9NJwEKEUFYS6eAfj1GMmAN8CuU3EbmLIItkqY",
+    "eyJhbGciOiJIUzI1NiIsImMxNG4iOiJKQ1MiLCJraWQiOiJpbnRlcm9wLXYxIiwidHlwIjoiYXQrand0In0.eyJhdWQiOm51bGwsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3siY29uc3RyYWludHMiOltdLCJzY29wZXMiOlsicmVwbzpzdGF0dXMiXSwidHlwZSI6ImFnZW50X2RlbGVnYXRpb24ifV0sImRlbF9kZXB0aCI6MSwiZXhwIjo5MDAsImlhdCI6MCwiaXNzIjoiYXR0ZW51LWd1YXJkIiwianRpIjoiY2hhaW46bjEiLCJwYXJfaGFzaCI6IkkxOHh1eEhOR3BfNHpsNmlvR2plVnNmeFM3U1NvMG4tMVFEYmRvREhhSG8iLCJzdWIiOiJ3b3JrZXIifQ.wS9Hq31-T-oUGx53FPY-dNvouxQ7z1hUBCKmEzAbYMw"
+  ]
+}

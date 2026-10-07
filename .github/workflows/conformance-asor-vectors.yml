@@ -16,6 +16,11 @@ on:
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
+    inputs:
+      sdk_ref:
+        description: cred-ninja/sdk ref to run the vectors against (default main)
+        required: false
+        default: main
 
 jobs:
   vectors:
@@ -27,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: cred-ninja/sdk
-          ref: main
+          ref: ${{ github.event.inputs.sdk_ref || 'main' }}
           path: sdk
       - uses: actions/setup-node@v4
         with:
@@ -43,10 +48,11 @@ jobs:
         run: |
           echo "SDK_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "sdk commit: $(git rev-parse HEAD)"
-      - name: Run vectors against sdk main
+      - name: Run vectors against sdk
         working-directory: protocol/conformance/asor-delegation-chain
-        # --allow-gaps stays until the constraint ceiling decision lands.
-        # See sdk docs/design/delegation-constraints.md.
+        # --allow-gaps covers the two JSON canonicalization GAPs
+        # (duplicate_member, unsafe_integer). The ceiling GAP closed with
+        # sdk e92af19; see conformance/asor-delegation-chain/README.md.
         run: |
           npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps
           npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps --json > "run-sdk-${SDK_SHA}.json"
