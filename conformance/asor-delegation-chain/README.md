@@ -100,3 +100,27 @@ Three PASSes carry a reason-name mismatch worth knowing about, all deliberate:
 The two GAPs are JSON canonicalization properties Cred's decoder doesn't represent: `reject_unsafe_integer` (Cred never canonicalizes through JCS/binary64, so an integer at 2**53 looks like an ordinary in-range number), and `reject_duplicate_member` (`JSON.parse` silently keeps the last value of a duplicate member, so Cred's decoder has no way to see the duplicate).
 
 Before the sdk's wildcard-subsumption fix the shipping code scored 1 of 7 on the original vector set: every chain except bad_signature died at hop 1 with `no_scopes_granted` because scope comparison was exact-match and could not narrow `crm.*` to `crm.read`. The runner depends on `verifyDelegationChain`, which did not exist then, so it cannot be pointed at that code; the 1 of 7 figure comes from the original ad hoc harness.
+
+## Proposed vectors (not yet in attenu-guard)
+
+`proposed-vectors/` holds vectors Cred has offered upstream and that are not part of the pinned v0.9.0 set. They are generated, not copied: `npx tsx make-scope-vectors.ts` rewrites them deterministically with the same JCS + HS256 + `par_hash` recipe the v0.9.0 files use, so they can be diffed against whatever Asor adopts. Run them with `npx tsx run.ts --sdk PATH --vectors ./proposed-vectors`.
+
+Scope classes, offered 2026-10-06 for the -02 (list thread with Rafael Asor and Iman Schrock), grammar:
+
+```
+scope          = literal-scope / wildcard-scope / opaque-scope
+literal-scope  = segment "." segment *("." segment)        ; -01 4.1, unchanged
+wildcard-scope = segment *("." segment) ".*"               ; -01 4.1, unchanged
+opaque-scope   = 1*( %x21 / %x23-29 / %x2B-5B / %x5D-7E )  ; RFC 6749 scope-token minus "*"
+```
+
+Classification by precedence (literal, wildcard, opaque, else malformed). A wildcard covers a literal under its prefix and never an opaque scope; an opaque scope covers only a byte-identical opaque scope.
+
+| Vector | Expected | Tests |
+|---|---|---|
+| reject_wildcard_over_opaque.json | not_narrower | `drive.*` over `drive.Read`: shared prefix, but uppercase makes the child opaque. A raw-prefix verifier accepts this and is wrong (cred-ninja/sdk main before PR #43 did). |
+| reject_opaque_over_wildcard.json | not_narrower | `drive.Read` over `drive.*`: an opaque grant never covers a wildcard. |
+| valid_wildcard_over_literal.json | accept | `payment.*` over `payment.release`: the -01 4.1 rule, unchanged. Pairs with emilia's `payment-terminal-wildcard-covered`. |
+| valid_opaque_exact.json | accept | `User.Read`, `repo:status` over `repo:status`: provider-native scopes narrow by exact equality. Under -01 4.1 as written both tokens are malformed; this is the gap the opaque class closes. |
+
+Against cred-ninja/sdk with `classifyScope` (PR #43): 4 of 4. Against sdk main at `9995d53`: 3 of 4, `reject_wildcard_over_opaque` accepted, which is the behaviour the PR fixes.

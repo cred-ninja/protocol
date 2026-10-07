@@ -1,0 +1,14 @@
+{
+  "description": "Scope classes: the root grants the opaque scope 'drive.Read'; the child requests the wildcard 'drive.*'. An opaque scope covers only a byte-identical opaque scope and never a wildcard. MUST be rejected as not_narrower.",
+  "expect_reject_reason": "not_narrower",
+  "now": 0,
+  "signer": {
+    "alg": "HS256",
+    "kid": "interop-v1",
+    "secret_hex": "617474656e752d67756172642d696e7465726f702d766563746f72732d76312d66697865642d736563726574"
+  },
+  "tokens": [
+    "eyJhbGciOiJIUzI1NiIsImMxNG4iOiJKQ1MiLCJraWQiOiJpbnRlcm9wLXYxIiwidHlwIjoiYXQrand0In0.eyJhdWQiOm51bGwsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3siY29uc3RyYWludHMiOltdLCJzY29wZXMiOlsiZHJpdmUuUmVhZCJdLCJ0eXBlIjoiYWdlbnRfZGVsZWdhdGlvbiJ9XSwiZGVsX2RlcHRoIjowLCJkZWxfbWF4X2RlcHRoIjoyLCJleHAiOjM2MDAsImlhdCI6MCwiaXNzIjoiYXR0ZW51LWd1YXJkIiwianRpIjoiY2hhaW46bjAiLCJzdWIiOiJvcmNoZXN0cmF0b3IifQ.IUshe_qHy4fFzepxnzw5X1DxJz0kKQ6360HDPqFju2U",
+    "eyJhbGciOiJIUzI1NiIsImMxNG4iOiJKQ1MiLCJraWQiOiJpbnRlcm9wLXYxIiwidHlwIjoiYXQrand0In0.eyJhdWQiOm51bGwsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3siY29uc3RyYWludHMiOltdLCJzY29wZXMiOlsiZHJpdmUuKiJdLCJ0eXBlIjoiYWdlbnRfZGVsZWdhdGlvbiJ9XSwiZGVsX2RlcHRoIjoxLCJleHAiOjkwMCwiaWF0IjowLCJpc3MiOiJhdHRlbnUtZ3VhcmQiLCJqdGkiOiJjaGFpbjpuMSIsInBhcl9oYXNoIjoiZkMxbDNLNGxuRjJZei1BR0NlSVdYVXg5VjNxbWZSWVZ5WG1yZFVoWFljayIsInN1YiI6IndvcmtlciJ9.tX4gFHghMkBj70c6jNVom9wAAAw8YwDgEHUEdX7oL-U"
+  ]
+}
