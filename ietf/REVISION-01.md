@@ -13,3 +13,6 @@ Validation: regenerated the XML and rendered text from the canonical `.mkd` with
 - 2026-10-07: Section 5.4 states that actor attribution is attested per hop (receipt records the verified `act` and its as-of time; verifiers compose attestations rather than re-deriving a prior actor from a later token), per Wes Jackson's addition on the AIMS-00 multi-hop thread. Related Work notes the Delegate SD-JWT adoption call and the attenuation, lifetime, and depth rules it leaves to the chain layer. Rebuilt with kdrfc -3.
 
 - 2026-10-07: back matter gains "Changes from -00" and three acknowledgments (Asor, Schrock, Jackson).
+- 2026-10-07: rebuilt at 8a79cd4 and checked the rendered text: no line over 72 columns, ASCII only, no placeholders. Rebuild reproduces the committed `.txt` and `.xml` byte for byte.
+
+Submission steps (not yet done): set `date:` in the `.mkd` front matter to the submission day, run `kdrfc -3`, commit the regenerated `.txt`/`.xml`, upload the `.xml` at https://datatracker.ietf.org/submit/ (Datatracker warns when the document date is more than a few days behind the upload). Then send the introduction post (Gmail draft r-7375876266720416502, to wimse cc oauth). Cutoff for IETF 127 is 2026-11-02.
