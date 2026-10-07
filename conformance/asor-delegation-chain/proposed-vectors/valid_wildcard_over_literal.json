@@ -1,0 +1,14 @@
+{
+  "description": "Scope classes: the root grants 'payment.*'; the child requests 'payment.release', a literal-scope under the same prefix. Wildcard coverage of a literal is the -01 Section 4.1 rule, unchanged by the opaque class. MUST be accepted. Pairs with emilia's payment-terminal-wildcard-covered.",
+  "expect": "accept",
+  "now": 0,
+  "signer": {
+    "alg": "HS256",
+    "kid": "interop-v1",
+    "secret_hex": "617474656e752d67756172642d696e7465726f702d766563746f72732d76312d66697865642d736563726574"
+  },
+  "tokens": [
+    "eyJhbGciOiJIUzI1NiIsImMxNG4iOiJKQ1MiLCJraWQiOiJpbnRlcm9wLXYxIiwidHlwIjoiYXQrand0In0.eyJhdWQiOm51bGwsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3siY29uc3RyYWludHMiOltdLCJzY29wZXMiOlsicGF5bWVudC4qIiwibWFpbC5zZW5kIl0sInR5cGUiOiJhZ2VudF9kZWxlZ2F0aW9uIn1dLCJkZWxfZGVwdGgiOjAsImRlbF9tYXhfZGVwdGgiOjIsImV4cCI6MzYwMCwiaWF0IjowLCJpc3MiOiJhdHRlbnUtZ3VhcmQiLCJqdGkiOiJjaGFpbjpuMCIsInN1YiI6Im9yY2hlc3RyYXRvciJ9.3iGaYGtXClfHoz-CkHRzxk_FUMuZuwN6HProxkAOIx8",
+    "eyJhbGciOiJIUzI1NiIsImMxNG4iOiJKQ1MiLCJraWQiOiJpbnRlcm9wLXYxIiwidHlwIjoiYXQrand0In0.eyJhdWQiOm51bGwsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3siY29uc3RyYWludHMiOltdLCJzY29wZXMiOlsicGF5bWVudC5yZWxlYXNlIl0sInR5cGUiOiJhZ2VudF9kZWxlZ2F0aW9uIn1dLCJkZWxfZGVwdGgiOjEsImV4cCI6OTAwLCJpYXQiOjAsImlzcyI6ImF0dGVudS1ndWFyZCIsImp0aSI6ImNoYWluOm4xIiwicGFyX2hhc2giOiJwc2JIdlNxLWlqNVZrbkMzbUdPd0JJV2xMNDVWWjR2d3NBREtHS056YWxVIiwic3ViIjoid29ya2VyIn0.YvLIRhheLm2z9CxtMfNu2_szNWiiognGVH06M_u_Rxo"
+  ]
+}
