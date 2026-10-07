@@ -14,7 +14,7 @@ Contributions to the protocol specification are welcome. This is an early-stage 
 
 1. Open an issue describing the gap, concern, or proposal with enough specificity to evaluate it
 2. Reference relevant standards and existing IETF drafts where applicable
-3. For specification changes, submit a pull request against `draft-sweeney-wimse-credential-delegation-00.md`
+3. For specification changes, submit a pull request against the current `ietf/draft-sweeney-wimse-credential-delegation-NN.mkd` (the kramdown-rfc source of truth) and mirror the change in the readable `draft-sweeney-wimse-credential-delegation-NN.md`; regenerate XML and text with `kdrfc -3`
 
 Pull requests that improve clarity, fix normative language inconsistencies, or add well-reasoned security analysis are particularly welcome.
 
