@@ -60,16 +60,17 @@ Scores are only citable with the SDK commit they were taken at. Retained machine
 | 2026-10-06 | `ff00421b1a237f20c6de07cc49b33a23e7352181` | 17 of 20, 0 FAIL, 3 GAP | `results/2026-10-06-sdk-ff00421.json` (Node 22.22.0) |
 | 2026-10-06 | `e92af1903a5c9bcf1b485ff6cd243c64b718338f` | 18 of 20, 0 FAIL, 2 GAP | `results/2026-10-06-sdk-e92af19.json` (Node 22.22.0) |
 | 2026-10-07 | `b1bfec02e941378164aba380bde15d831aaf6636` | 20 of 20, 0 FAIL, 0 GAP | `results/2026-10-07-sdk-b1bfec0.json` (Node 22.22.0) |
+| 2026-10-07 | `a41366e1eb505b6c8a3b6dcc1d39c6b913e38b2c` (main, PR #45 merged) | 20 of 20, 0 FAIL, 0 GAP | `results/2026-10-07-sdk-a41366e.json` (Node 22.22.0) |
 
 The `ff00421` SDK carried constraint ceilings in receipts and enforced asor-01 section 4.3 subsumption, but its `parseConstraints` accepted only numeric `max` and numeric `rank`, while the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank label per section 4.2. Passing `constraints` through would have failed every valid chain, so the runner withheld it and `reject_exceeded_ceiling` stayed GAP. sdk `e92af19` (cred-ninja/sdk PR #41) covers all six section 4.2 types and resolves rank labels through a per-key ordering seeded with the draft's `egress` none < internal < any; the runner now maps `constraints` onto `DelegationChainHop.constraints` and hands the parsed lists to `validateSubDelegation` the way the subdelegate route does. Against an SDK older than `e92af19` the constrained vectors now fail closed as `malformed` at hop 0; that is the correct reading of section 4.2 for an implementation that does not know the `rank` label form.
 
-sdk `b1bfec0` (cred-ninja/sdk PR #45) adds `parseStrictJson`, which rejects duplicate member names and integers outside the binary64 exact range, and uses it to decode receipts. The runner decodes vector payloads the same way when the sdk under test exports it (falling back to `JSON.parse` for older sdks), so `reject_duplicate_member` and `reject_unsafe_integer` pass: 20 of 20.
+sdk `b1bfec0` (cred-ninja/sdk PR #45, merged to main as `a41366e`) adds `parseStrictJson`, which rejects duplicate member names and integers outside the binary64 exact range, and uses it to decode receipts. The runner decodes vector payloads the same way when the sdk under test exports it (falling back to `JSON.parse` for older sdks), so `reject_duplicate_member` and `reject_unsafe_integer` pass: 20 of 20.
 
 Spec input for asor -02: `rank` labels carry no ordering on the wire. The draft names one example ordering and the vectors depend on it. Either the constraint-types registry entry for a key carries its ordering, or the token does; the SDK fails closed on any label without a registered ordering.
 
 ## Current matrix
 
-Against cred-ninja/sdk `b1bfec0` (2026-10-07). `e92af19` differs only in the two JSON rows below (GAP there); `4a24376` and `ff00421` also GAP on `reject_exceeded_ceiling`:
+Against cred-ninja/sdk `a41366e` (main, 2026-10-07; identical rows at `b1bfec0`). `e92af19` differs only in the two JSON rows below (GAP there); `4a24376` and `ff00421` also GAP on `reject_exceeded_ceiling`:
 
 | Vector | Expected | Cred | Result |
 |---|---|---|---|
