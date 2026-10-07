@@ -501,9 +501,18 @@ This document requests registration of:
 
 ---
 
+## Changes from -00
+
+- Workload Authorization Grant composition (Section 4.4): WAG-provisioned workloads authenticate per Section 4.2; `act.sub` stays the Agent DID; WAG identity travels as receipt identity evidence or as `act` `iss` and `sub`; WAG bearer status noted, proof of possession comes from the Delegation Token's DPoP binding.
+- Delegation Token adds `client_id` naming the acting agent per RFC 9068 and AIMS §10.3, which MUST agree with `act.sub`.
+- New Section 5.3 Constraint Ceilings: the `constraints` claim adopts the [ASOR] §4.2 vocabulary (`max`, `min`, `one_of`, `not_one_of`, `prefix`, `rank`) and §4.3 subsumption, fail-closed parsing, inherit-on-omit, and the rank-label ordering rule. Numeric ceilings leave the capability object. Lifetime aggregates stay DS-debited.
+- Section 5.4: per-hop re-verification of authority and freshness; monotonic narrowing stated as containment plus order-independent intersection; root subject preserved in `sub`, current actor in `act.sub`, prior actors as nested `act` for attribution only; actor attribution attested per hop with its as-of time; receipt content adds the root subject and identity evidence; a SHOULD-level per-hop audit record distinct from the receipt; sub-delegation subset rule reads equal or narrower.
+- Related Work: [ASOR] added; AIMS and WAG references refreshed; Delegate SD-JWT paragraph notes the adoption call and the chain rules it leaves to this layer.
+- References: RFC 9068 normative; [ASOR] informative.
+
 ## Acknowledgments
 
-The design of this protocol draws on UCAN attenuation semantics [UCAN-SPEC], the object-capability literature, and ongoing work in the IETF WIMSE and OAuth working groups. Threat modeling was informed by [OWASP-AGENTIC] and [NIST-AGENT-ID].
+The design of this protocol draws on UCAN attenuation semantics [UCAN-SPEC], the object-capability literature, and ongoing work in the IETF WIMSE and OAuth working groups. Threat modeling was informed by [OWASP-AGENTIC] and [NIST-AGENT-ID]. Rafael Asor's delegation chain draft supplied the constraint vocabulary adopted in -01; Iman Schrock found the defect in the first scope-class proposal; Wes Jackson supplied the per-hop attestation framing in Section 5.4.
 
 ---
 
