@@ -2,9 +2,9 @@
 
 **Internet-Draft:** draft-sweeney-wimse-credential-delegation-01
 
-**Document date:** 2026-10-06
+**Document date:** 2026-10-13
 
-**Local revision:** 2026-10-13, not submitted
+**Local revision:** 2026-10-14, not submitted
 
 **Intended status:** Standards Track
 
@@ -34,7 +34,7 @@ The core contract covers credential custody, exercise by proxy, signed delegatio
 
 An interoperable deployment MUST select and document a wire profile, including actor authentication, proof binding, authority representation and comparison, receipt serialization and signature verification, and consent and revocation state. A profile MUST preserve the core requirements; it MUST NOT substitute an identity assertion or a valid historical receipt for current authority. The compatibility profile in [compatibility profile](#compatibility-profile) retains the previous draft's choices for review. Other profiles require their own specification; this document does not define new OAuth grant types.
 
-The compatibility profile is not an assertion that an existing SDK implements every requirement. The version label `0.1.0` does not establish support for DPoP, token exchange, CIBA, or the stated revocation deadlines. This revision neither defines a Wire 0.2.0 implementation nor changes stable SDK routes.
+The compatibility profile is not an assertion that an existing SDK implements every requirement. The version label `0.1.0` does not establish support for DPoP, token exchange, CIBA, or the stated revocation deadlines. This revision neither defines a Wire 0.2.0 implementation nor changes stable SDK routes. See [impl status](#impl-status) for the pinned SDK coverage and limits.
 
 <a id="relationship-to-existing-work"></a>
 
@@ -42,7 +42,7 @@ The compatibility profile is not an assertion that an existing SDK implements ev
 
 AIMS [AIMS](#ref-aims) supplies the broader identity and authorization framework. WAG [WAG](#ref-wag) supplies workload provisioning; the custody service uses its evidence only through a trusted identity mapping ([wag composition](#wag-composition)). The agent identifier in a provisioning assertion does not establish Subject consent.
 
-Asor's delegation-chain draft [ASOR](#ref-asor) specifies an authority representation and chain verification. This service checks current authority and manages credential custody and aggregate state. The compatibility profile references Asor -01's constraint vocabulary and subsumption rules rather than maintaining a second registry. Its `cred_delegation` detail, top-level constraints, and receipt representation are not Asor's wire format. Passing vectors through a claim-mapping adapter is evidence for the mapped checks, not interchangeable tokens or receipts.
+Asor's delegation-chain draft [ASOR](#ref-asor) specifies an authority representation and chain verification. This service checks current authority and manages credential custody and aggregate state. The compatibility profile references Asor -01's constraint vocabulary and subsumption rules rather than maintaining a second registry. Its `cred_delegation` detail, top-level constraints, and receipt representation are not Asor's wire format. Passing vectors through a claim-mapping adapter is evidence for the mapped checks, not interchangeable tokens or receipts. [impl status](#impl-status) records the pinned implementation and vector coverage.
 
 RFC 8693 [RFC8693](#ref-rfc8693) supplies actor attribution semantics. Prior actors recorded in nested `act` claims describe history; they do not independently authorize a new action. Receipt composition must retain both authenticated attribution and the separate authority checks in [chain integrity](#chain-integrity).
 
@@ -137,6 +137,55 @@ A deployment composing with another chain format MUST declare the authority and 
 
 Direct resource-server token exchange is a future composition outside the custody proxy contract. It requires a separate specification for the issued token, audience, holder binding, authority mapping, and revocation. This draft does not authorize forwarding a custody DT or stored credential to an arbitrary third party and makes no implementation claim for such a route.
 
+<a id="impl-status"></a>
+
+# Implementation Status
+
+Note to the RFC Editor: please remove this section and the reference to [RFC7942](#ref-rfc7942) before publication.
+
+This section records the status of known implementations of the protocol defined by this specification at the time of posting of this Internet-Draft, and is based on a proposal described in [RFC7942](#ref-rfc7942). The description of implementations in this section is intended to assist the IETF in its decision processes in progressing drafts to RFCs. Please note that the listing of any individual implementation here does not imply endorsement by the IETF. Furthermore, no effort has been spent to verify the information presented here that was supplied by IETF contributors. This is not intended as, and must not be construed to be, a catalog of available implementations or their features. Readers are advised to note that other implementations may exist.
+
+According to [RFC7942](#ref-rfc7942), "this will allow reviewers and working groups to assign due consideration to documents that have the benefit of running code, which may serve as evidence of valuable experimentation and feedback that have made the implemented protocols more mature. It is up to the individual working groups to use this information as they see fit".
+
+## Cred SDK
+
+**Implementer:** Kieran Sweeney (author of this document)
+
+**Location:** https://github.com/cred-ninja/sdk/tree/09f9488683a38028eacdff5c6a5610b716415536, described here at the pinned commit 09f9488 (2026-10-13). Later commits and local unpublished patches are outside this status snapshot.
+
+**License:** Apache-2.0
+
+**Language:** TypeScript (Node.js)
+
+**Maturity:** Experimental. Brokered paths implement parts of the custody, exercise, and attenuated sub-delegation architecture, with the limits below. The SDK does not meet every core requirement and does not implement the compatibility profile's token, request, or proof-of-possession formats. The version label `0.1.0` and the mapped vector results do not establish conformance to that profile.
+
+**Contact:** kieran@kierans.net
+
+Implemented mechanisms and partial coverage:
+
+- Agent identity ([profile identity](#profile-identity)): Ed25519 key pairs and `did:key` identifiers. P-256 is not implemented.
+- Protocol version negotiation ([profile version](#profile-version)): the `Cred-Protocol-Version` header, version `0.1.0`, and HTTP 426 with `protocol_version_unsupported`.
+- Credential wrapping ([exercise flow](#exercise-flow)): server brokered paths retain provider tokens and make the upstream call on the agent's behalf. Server sub-delegation always returns a brokered handle. Legacy root delegation defaults to a raw provider token, local SDK delegation and sub-delegation return a token to the calling process, and local MCP may cache it while hiding it from tool output. Link defaults to handles but permits explicit raw issuance under additional checks. The custody guarantee does not apply to every SDK path.
+- Sub-delegation with attenuation ([chain integrity](#chain-integrity)): wildcard-aware scope containment, a per-permission depth limit, matching service, user, and application context across hops, and a child expiry bounded by the parent's.
+- Constraint ceilings ([constraint ceilings](#constraint-ceilings)): all six types, fail-closed parsing, subsumption per hop, inherit-on-omit, and `rank` labels resolved through a per-key ordering, with an unknown label rejected.
+- Signed receipts: the server mints a compact Ed25519 JWS at each hop carrying `client_id` (the agent DID), a commitment to the parent (SHA-256 over the full compact parent receipt), and a signed lineage of ancestor DIDs. Offline chain verification checks signatures, linkage, depth, scope and ceiling subsumption, and expiry ordering. Receipt payloads are decoded as strict JSON: duplicate member names and integers outside the exact range of an IEEE 754 binary64 are rejected.
+- Revocation ([revocation](#revocation)): per-agent and per-connection revocation endpoints. Before minting a child, the server checks registered ancestor DIDs in the parent's signed lineage and the parent actor. Missing agent records are allowed; older receipts without lineage do not support the same full-ancestry check. These are issuance checks, not invalidation of already-issued handles.
+- Audit: an audit log of delegation, exercise, and revocation events.
+
+Not implemented, or implemented differently:
+
+- Token exchange: delegation and sub-delegation use custom endpoints, not [RFC8693](#ref-rfc8693) token exchange.
+- Proof of possession: no DPoP. Agents prove key possession with signed payloads and HTTP Message Signatures [RFC9421](#ref-rfc9421).
+- Capabilities: scope strings plus `constraints`, not [RFC9396](#ref-rfc9396) `authorization_details`.
+- Agent authentication: opaque bearer tokens plus signed payloads, not an [RFC7523](#ref-rfc7523) assertion.
+- Consent: a consent URL the user opens and the agent polls, not CIBA [OIDC-CIBA](#ref-oidc-ciba).
+- Complete receipt-chain admission: the parent receipt is verified, but full ancestor receipt-chain verification during child issuance runs only when the caller supplies a nonempty `ancestor_receipts` array. The signed DID lineage used for agent-status checks is not a substitute for re-verifying every ancestor receipt.
+- Exercise authority and aggregate state: issuance-time scope containment and constraint ceilings do not establish every-operation enforcement or shared lifetime-budget debits. Google broker scope checks distinguish API families, not all operations within one family; Link Google and Slack scope narrowing may update records without blocking each removed operation. Guard policies may add restrictions but do not establish universal authority mapping.
+- Token claims: receipts name the agent in both `sub` and `client_id`; the delegating principal is not yet in `sub`, and there is no `act` or `prf` claim. Changing this mapping requires an agreed wire profile; this status section does not define or approve that change.
+- Revocation coverage, interface, and timing: no `DELETE /delegation/{jti}` endpoint or `revoked_count`. Already-issued legacy root and child broker handles retain a cached provider token and do not recheck agent or ancestor records. At this pinned commit, legacy connection deletion removes the vault entry but does not evict these handles or revoke the token at the provider. Link handles recheck their connection, grant, and permission state on later use. Complete cascading invalidation of outstanding handles is not implemented, and the 1-second and 5-second bounds in [profile revocation](#profile-revocation) are not measured by tests.
+
+Conformance results. The SDK's chain validation and sub-delegation checks were run against the twenty interop vectors published with [ASOR](#ref-asor) (attenu-guard v0.9.0) and against four scope-class vectors proposed to that draft's author for its next revision. At commit 09f9488, all twenty and all four pass; four of the twenty pass with a rejection reason that the runner maps to the vector's reason name. The runner, vectors, and pinned results are at https://github.com/cred-ninja/protocol/tree/5a7ca03094cdaef0c410b9931b94a4a3a57da9bd/conformance/asor-delegation-chain. These vectors are chains of HS256 tokens in the [ASOR](#ref-asor) format; the runner checks their signatures and parent hashes itself and maps their claims onto the SDK's hop model. They exercise the scope grammar, constraint subsumption, depth, linkage, expiry ordering, and strict JSON decoding that this document shares with [ASOR](#ref-asor). They do not test any token, receipt, or request format defined in this document.
+
 # Security Considerations
 
 ## Credential Exposure and Confused Deputies
@@ -170,6 +219,8 @@ The custody contract defines no new OAuth grant type. Registration work for the 
 
 This appendix preserves the previous draft's concrete JWT, DPoP, did:key, version, and consent choices. Its requirements apply when this profile is selected, in addition to the core contract. It is a draft profile, not a statement of deployed SDK support or completed interoperability. The exact receipt serialization and CIBA/DPoP interaction still require a complete wire specification before implementation or release claims.
 
+<a id="profile-version"></a>
+
 ## Protocol Version Negotiation
 
 The retained version label for this compatibility profile is `0.1.0`.
@@ -201,6 +252,8 @@ The response MUST also include `Cred-Protocol-Version` set to the server's curre
 During the `0.1.0` compatibility window, a missing `Cred-Protocol-Version` request header MAY be treated as `0.1.0`. This allowance exists only because there is no earlier wire version to downgrade to. Implementations that raise the version floor above `0.1.0` MUST reject missing protocol-version headers with `protocol_version_unsupported`.
 
 Clients MUST reject responses selecting a version below their configured floor or outside their supported-version set, and MUST distinguish `protocol_version_unsupported` from authentication, authorization, and policy failures.
+
+<a id="profile-identity"></a>
 
 ## Ephemeral Key Pairs
 
@@ -355,6 +408,9 @@ This preserves the previous CIBA-derived composition. It does not supply missing
 - Retain WAG issuer and Platform-registration context without treating provisioning as proof of possession or Subject consent.
 - Clarify DPoP request-integrity limits and remove the unused proposed OAuth grant-type registration.
 
+- Add [impl status](#impl-status) per [RFC7942](#ref-rfc7942), retaining the upstream pinned 20+4 mapped-vector results and distinguishing partial SDK coverage from the core and compatibility-profile requirements.
+- Retain the October 13 document date and refreshed [AGENTIC-JWT](#ref-agentic-jwt) reference from the broader draft; the removed related-work survey remains outside the narrowed scope.
+
 # Acknowledgments
 
 The design draws on UCAN delegation [UCAN-SPEC](#ref-ucan-spec) and the object-capability literature [MILLER-2006](#ref-miller-2006). Rafael Asor's delegation-chain work supplied the selected constraint vocabulary; Iman Schrock identified a scope-class defect; Wes Jackson contributed the per-hop actor-attestation framing.
@@ -401,6 +457,14 @@ The design draws on UCAN delegation [UCAN-SPEC](#ref-ucan-spec) and the object-c
 
 **ASOR:** [Verifiable Attenuated Delegation for AI Agent Chains](https://www.ietf.org/archive/id/draft-asor-wimse-agent-delegation-chain-01.html)
 
+<a id="ref-rfc7942"></a>
+
+**RFC7942:** [RFC7942](https://www.rfc-editor.org/rfc/rfc7942.html)
+
+<a id="ref-rfc9421"></a>
+
+**RFC9421:** [RFC9421](https://www.rfc-editor.org/rfc/rfc9421.html)
+
 <a id="ref-ucan-spec"></a>
 
 **UCAN-SPEC:** [UCAN Delegation](https://github.com/ucan-wg/delegation)
@@ -423,7 +487,7 @@ The design draws on UCAN delegation [UCAN-SPEC](#ref-ucan-spec) and the object-c
 
 <a id="ref-agentic-jwt"></a>
 
-**AGENTIC-JWT:** [Secure Intent Protocol for Agentic Systems](https://datatracker.ietf.org/doc/draft-goswami-agentic-jwt/)
+**AGENTIC-JWT:** [Secure Intent Protocol: JWT Compatible Agentic Identity and Workflow Management](https://datatracker.ietf.org/doc/draft-goswami-agentic-jwt/)
 
 <a id="ref-rfc2119"></a>
 

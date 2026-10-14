@@ -1,3 +1,29 @@
+## Reconciled local revision — 2026-10-14
+
+This local revision has not been submitted. Reconciled the narrowed core with
+protocol main 5a7ca03 after preserving the earlier eight-file patch in a local
+checkpoint commit. Retain main's October 13 document date; it is not evidence of
+submission. Historical notes below describe earlier versions, not current section
+numbers or a send/upload instruction executed by this revision.
+
+- Keep custody, proxy exercise, signed receipts, and composition in the core and
+  the existing wire choices in Appendix A. Preserve all prior normative limits.
+- Retain upstream Implementation Status and RFC 7942/RFC 9421 references, with
+  links adjusted to the narrowed profile. Status is pinned to SDK 09f9488 and
+  excludes unpublished local patches. Clarify raw/broker/Link custody, operation
+  mapping, aggregate-state and revocation limits from local source audits.
+- Preserve upstream conformance results (20 Asor and 4 proposed scope vectors)
+  byte-for-byte. They test mapped chain checks, not this draft's wire formats.
+- Retain the updated Goswami -01 metadata. The broader related-work survey and
+  references used only there remain removed; their newer metadata is preserved
+  in main's history and the merge evidence, not reintroduced as unused references.
+- Regenerate readable, XML and text companions from canonical source using
+  kramdown-rfc 1.7.39 and xml2rfc 3.34.0. Date is read from canonical metadata.
+  Local document checks and preservation evidence are saved with the scheduled
+  run. No SDK runtime edits, remote push, standards submission or correspondence.
+
+## Earlier local narrowing notes
+
 ## Local narrowing revision — 2026-10-13
 
 This local revision is prepared for review and has not been submitted. Earlier
@@ -44,4 +70,7 @@ Validation: regenerated the XML and rendered text from the canonical `.mkd` with
 - 2026-10-07: back matter gains "Changes from -00" and three acknowledgments (Asor, Schrock, Jackson).
 - 2026-10-07: rebuilt at 8a79cd4 and checked the rendered text: no line over 72 columns, ASCII only, no placeholders. Rebuild reproduces the committed `.txt` and `.xml` byte for byte.
 
-Submission steps (not yet done): set `date:` in the `.mkd` front matter to the submission day, run `kdrfc -3`, commit the regenerated `.txt`/`.xml`, upload the `.xml` at https://datatracker.ietf.org/submit/ (Datatracker warns when the document date is more than a few days behind the upload). Then send the introduction post (Gmail draft r-7375876266720416502, to wimse cc oauth). Cutoff for IETF 127 is 2026-11-02.
+- 2026-10-13: submission pass. `date:` set to 2026-10-13. References checked against Datatracker the same day: draft-ietf-oauth-identity-chaining -15 "approved for publication" becomes -17, in the RFC Editor queue; Delegate SD-JWT adoption call closed 2026-10-12, result not yet announced (oauth list and Gmail checked), and the Related Work paragraph says so; Zhu -04 to -05, Raut gets -02, Nelson -05 to -13 (retitled "Agent Delegation Receipts", description updated to principal-signed receipts), Reece -00 to -02 (full title), WPT -01 to -02, Ni -02 to -03, Goswami -00 to -01 (active, retitled, no longer expired), CB4A and ECT marked expired. ASOR -01, WAG -01, AIMS -00, AAT -01, WIMSE-ARCH -08, OBO-USER -02 and WIMSE-CRED-X -03 unchanged. New Section 9 Implementation Status per RFC 7942, written from the sdk source at main 09f9488: what is implemented (did:key Ed25519, version negotiation, brokered exercise, attenuated sub-delegation, all six constraint types, Ed25519 JWS receipts with client_id, parent hash and signed lineage, strict JSON, ancestor revocation check, audit) and what is not (RFC 8693 exchange, DPoP, RAR, RFC 7523 agent auth, CIBA, principal in `sub`, `act`/`prf`, revocation endpoint shape and timing). Asor v0.9.0 vectors re-run at 09f9488: 20 of 20; proposed scope vectors 4 of 4; results pinned in conformance/asor-delegation-chain/results. The section states the vectors use Asor's token format and do not test this document's formats. RFC 7942 and RFC 9421 added as informative. Changes from -00 updated.
+- 2026-10-13 validation: rebuilt with `kdrfc -3` (kramdown-rfc 1.7.43, xml2rfc 3.34.1); before editing, the rebuild reproduced the committed -01 `.txt` byte for byte. Rendered text: no line over 72 columns, ASCII only (the XML keeps the single non-breaking space kramdown-rfc emits in the BCP 14 boilerplate, as before). idnits 2.17.1: 0 errors, 0 flaws; warnings are UCAN-SPEC cited only from Acknowledgments and one example FQDN; comments are the known non-RFC normative refs (DID-CORE, DID-KEY, OIDC-CIBA).
+
+Submission steps: set `date:` in the `.mkd` front matter to the submission day, run `kdrfc -3`, commit the regenerated `.txt`/`.xml`, upload the `.xml` at https://datatracker.ietf.org/submit/ (Datatracker warns when the document date is more than a few days behind the upload). Then send the introduction post (Gmail draft r-7375876266720416502, to wimse cc oauth). Cutoff for IETF 127 is 2026-11-02.
