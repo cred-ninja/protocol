@@ -1,3 +1,32 @@
+## Local narrowing revision — 2026-10-13
+
+This local revision is prepared for review and has not been submitted. Earlier
+notes below record the broader October 6–7 draft and are historical.
+
+- Core now covers custody, proxy exercise, signed receipts, and composition;
+  fixed JWT/DPoP/did:key/version/CIBA choices are in Appendix A.
+- Preserve current authority/freshness and per-hop proof checks, Subject
+  continuity, actor verification times, authenticated linkage, equal-or-narrower
+  authority, fail-closed constraints, and DS accounting for shared budgets.
+- Preserve Appendix A's 1-second/5-second revocation deadlines, 90-day consent
+  retention, and existing token/version labels without asserting SDK support.
+- Reference Asor -01 Sections 4.2/4.3 as a normative profile dependency instead
+  of copying its type registry. Remove universal receipt-interop claims.
+- Correct the strict-subset terminology contradiction and DPoP body-integrity
+  overstatement. WAG registration evidence remains distinct from DID actor
+  attribution, possession, and Subject consent.
+- Direct resource-server exchange remains future profile work. Remove the
+  unused grant-type registration proposal. Receipt encoding, CIBA/DPoP details,
+  and complete registration templates still need specification.
+- Readable companion synchronized from canonical source. Old source rendered
+  with kramdown-rfc 1.7.39 (Ruby 4.0.7) and xml2rfc 3.34.0 reproduces the old
+  text byte-for-byte; XML differs only in its generator-version comment.
+  Revised XML/text regenerated with the same tools. The retained October 6
+  document date produces an expected age warning; it is not a submission date
+  change. All -00 artifacts remain unchanged.
+
+## Historical preparation notes
+
 Prepared -01, 2026-10-06
 
 - .mkd remains the filing source of truth; new readable .md and XML companions are included, preserving all -00 artifacts.

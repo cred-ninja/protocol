@@ -23,7 +23,7 @@ Pull requests that improve clarity, fix normative language inconsistencies, or a
 The following decisions are settled. Proposals that revisit them should include new evidence or analysis not present in the current spec:
 
 1. **Compose, don't invent**: every mechanism must reuse an existing standard
-2. **Credentials never cross the agent trust boundary**: the proxy model (Section 6) is a core security property
+2. **Credentials never cross the agent trust boundary**: the [custody and exercise contract](draft-sweeney-wimse-credential-delegation-01.md#custody) is a core security property
 3. **Attenuation is structural**: authority can only narrow at each hop, enforced by the Delegation Server
 4. **Revocation is synchronous**: eventual consistency is not acceptable for this threat model
 
@@ -34,4 +34,4 @@ This draft is targeting the IETF WIMSE WG and OAuth WG. Relevant mailing lists:
 - WIMSE: [wimse@ietf.org](https://www.ietf.org/mailman/listinfo/wimse)
 - OAuth: [oauth@ietf.org](https://www.ietf.org/mailman/listinfo/oauth)
 
-This specification is designed as a companion to [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (at -02 as of June 2026). Engagement with that document and its authors on the mailing lists is encouraged.
+This specification composes with [AIMS -00](https://www.ietf.org/archive/id/draft-ietf-wimse-aims-00.html) and the explicitly versioned authority and provisioning profiles identified in the current draft. Engagement with that document and its authors on the mailing lists is encouraged.

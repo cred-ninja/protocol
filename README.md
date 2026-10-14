@@ -1,67 +1,48 @@
 # Cred Protocol
 
-**An open credential delegation protocol for AI agents.**
+A draft credential-custody and exercise contract for agents acting on behalf of users.
 
-> **Status:** Pre-submission draft · Targeting IETF WIMSE WG / OAuth WG · Next milestone: datatracker submission ahead of IETF 127 (San Francisco, November 2026)
+The prepared `-01` revision focuses on a Delegation Server that holds upstream
+credentials, authorizes the exact requested operation, performs it by proxy,
+and produces signed evidence of delegation. Receipts describe decisions at
+particular times; current consent, authority, and revocation remain separate checks.
 
----
+## Scope
 
-## The Problem
+- Credential custody with an opaque reference and no upstream secrets returned to agents.
+- Proxy exercise constrained by the Subject, actor, operation, resource, and current policy.
+- Signed per-hop receipts preserving Subject continuity, actor attribution and time, and authority narrowing.
+- Composition with AIMS, WAG, and an explicitly selected authority profile.
 
-MCP standardizes agent-to-tool connectivity. A2A standardizes agent-to-agent communication. No open protocol standard governs how credentials flow through these connections.
+The draft's compatibility appendix retains its earlier JWT, DPoP, did:key,
+version-negotiation, and CIBA-derived choices. Asor -01 supplies the selected
+constraint vocabulary; this draft does not maintain an independent constraint
+registry. A mapped vector result is not receipt wire-format interoperability.
 
-Every major platform treats agent credential management as the developer's problem: environment variables, hardcoded API keys, or proprietary vendor solutions. The result is that 53% of MCP servers use static long-lived secrets and only 8.5% use OAuth, not because developers prefer this, but because no standard exists.
+This is a local draft for review, not an IETF submission or an SDK release.
+The `0.1.0` label does not imply that stable SDK routes implement all appendix
+requirements. Wire 0.2.0 and a complete implementation plan remain separate work.
 
-## What This Protocol Defines
+## Repository contents
 
-A profile of existing OAuth 2.0 standards that enables:
+| File | Purpose |
+| --- | --- |
+| [Readable -01](draft-sweeney-wimse-credential-delegation-01.md) | Companion generated from the canonical body, with linked references |
+| [Canonical -01](ietf/draft-sweeney-wimse-credential-delegation-01.mkd) | kramdown-rfc source of truth |
+| [Rendered text](ietf/draft-sweeney-wimse-credential-delegation-01.txt) | Locally regenerated IETF-style preview |
+| [IETF artifacts](ietf/README.md) | Build instructions and revision record; -00 artifacts preserved |
+| [Conformance](CONFORMANCE.md) | Core/profile checklist and explicit limits of mapped tests |
+| [Chain vectors](conformance/asor-delegation-chain/README.md) | Vendored Asor vectors, claim mapping, and retained results |
+| [Contributing](CONTRIBUTING.md) | Contribution guidance |
 
-- **Multi-hop delegation chains**: User → Agent A → Agent B → Agent C, with cryptographic attenuation at each hop
-- **Cross-IdP interoperability**: works across Okta, Entra, Google, GitHub, and any OAuth provider
-- **Credential wrapping**: agents never see raw credentials; the Delegation Server exercises them on the agent's behalf
-- **Synchronous cascading revocation**: revocation propagates in under 5 seconds across the entire delegation tree
-- **Capability-shaped tokens**: not "access Google Drive" but "read file X in folder Y until time T with max 10 calls"
-- **Ephemeral agent identity**: no pre-registration; agents bootstrap identity from a `did:key` at instantiation
+## Implementation status
 
-## Protocol Composition
-
-This protocol is a precise profile of existing standards: no new token formats, no new grant types.
-
-| Standard | Role |
-|----------|------|
-| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) | OAuth 2.0 Token Exchange: wire protocol and delegation semantics |
-| [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449) | DPoP: proof-of-possession binding |
-| [RFC 9396](https://www.rfc-editor.org/rfc/rfc9396) | Rich Authorization Requests: capability structure |
-| [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523) | JWT Bearer: agent authentication |
-| [OIDC-CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) | Backchannel consent for async/offline agents |
-| [W3C did:key](https://w3c-ccg.github.io/did-method-key/) | Ephemeral agent identity without pre-registration |
-
-## Relationship to Active IETF Work
-
-The OAuth WG was rechartered in June 2026 with agents acting on behalf of users in scope, and the WIMSE WG is discussing adoption of AI agent authentication work following its June 3, 2026 interim. This protocol is designed to **complement** [draft-klrc-aiagent-auth](https://datatracker.ietf.org/doc/draft-klrc-aiagent-auth/) (at -02 as of June 2026), which provides the framework but defers delegation protocol mechanics. This specification provides those mechanics.
-
-Section 1.2 of the specification positions the protocol against the WIMSE WG's [architecture](https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/) and [Workload Proof Token](https://datatracker.ietf.org/doc/draft-ietf-wimse-wpt/), the IESG-approved [identity chaining](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-chaining/) work, and the closest individual drafts on attenuating tokens, credential brokering, delegated refresh tokens, SD-JWT delegation, delegation receipts, and human mandates.
-
-## Repository Contents
-
-| File | Description |
-|------|-------------|
-| [`draft-sweeney-wimse-credential-delegation-01.md`](./draft-sweeney-wimse-credential-delegation-01.md) | Full protocol specification, prepared -01 (readable rendering of `ietf/draft-sweeney-wimse-credential-delegation-01.mkd`) |
-| [`draft-sweeney-wimse-credential-delegation-00.md`](./draft-sweeney-wimse-credential-delegation-00.md) | Filed -00, kept for reference |
-| [`ietf/`](./ietf/) | kramdown-rfc source of truth (`.mkd`), generated XML and text; see `ietf/README.md` |
-| [`CONFORMANCE.md`](./CONFORMANCE.md) | Conformance requirements for implementations |
-| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | How to contribute |
-| [`IMPLEMENTATIONS.md`](./IMPLEMENTATIONS.md) | Known implementations |
-| [`conformance/asor-delegation-chain/`](./conformance/asor-delegation-chain/) | Interop runner for the draft-asor-wimse-agent-delegation-chain Appendix B vectors (v0.9.0, 20 vectors, pinned sdk commits) |
-
-## Reference Implementation
-
-[Cred](https://cred.ninja) is the reference implementation of this protocol: a hosted Delegation Server with SDKs for TypeScript, Python, and MCP.
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md). Issues and pull requests are welcome, particularly from implementers and IETF participants.
+[Cred SDK](https://github.com/cred-ninja/sdk) implements related custody and
+delegation components. Its [capability map](https://github.com/cred-ninja/sdk/blob/main/docs/protocol-conformance.md)
+records gaps. DPoP, CIBA, direct token exchange, receipt wire interoperability,
+and the profile's 1-second/5-second revocation deadlines need their own evidence
+before claiming full conformance.
 
 ## License
 
-The protocol specification is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The specification is available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
