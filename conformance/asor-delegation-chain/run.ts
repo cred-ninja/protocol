@@ -345,6 +345,15 @@ const CAUSE_02: Record<string, { hop: number; cause: RegExp; rule: string }> = {
   'reject_wildcard_over_opaque.json': { hop: 1, cause: /drive\.Read/, rule: 'Section 4.1, wildcard never covers opaque' },
 };
 
+/**
+ * Accepting -02 vectors whose point is a claim Cred does not read. Cred
+ * accepts them because it never looks, so an accept there says nothing
+ * about the rule and is reported GAP, not PASS.
+ */
+const ACCEPT_UNMAPPED_02: Record<string, string> = {
+  'valid_audience_array.json': 'aud as an array naming the verifier (step 8)',
+};
+
 function runVector02(file: string, data: any, vault: VaultApi): Row {
   const expect: string = data.expect ?? data.expect_reject_reason;
   const secret = Buffer.from(data.signer.secret_hex, 'hex');
@@ -416,7 +425,11 @@ function runVector02(file: string, data: any, vault: VaultApi): Row {
     }
   }
 
-  if (expect === 'accept') return { vector: file, expect, cred: 'accept', result: 'PASS', note: '' };
+  if (expect === 'accept') {
+    const unmapped = ACCEPT_UNMAPPED_02[file];
+    if (unmapped) return { vector: file, expect, cred: 'accept', result: 'GAP', note: `accepted, but ${unmapped} is not represented in Cred, so the accept tests nothing` };
+    return { vector: file, expect, cred: 'accept', result: 'PASS', note: '' };
+  }
   return { vector: file, expect, cred: 'accept', result: 'GAP', note: `accepted; ${cause?.rule ?? 'declared rejection'} is not represented in Cred` };
 }
 

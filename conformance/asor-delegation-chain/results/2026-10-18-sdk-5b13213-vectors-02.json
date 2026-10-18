@@ -36,8 +36,8 @@
       "vector": "valid_audience_array.json",
       "expect": "accept",
       "cred": "accept",
-      "result": "PASS",
-      "note": ""
+      "result": "GAP",
+      "note": "accepted, but aud as an array naming the verifier (step 8) is not represented in Cred, so the accept tests nothing"
     },
     {
       "vector": "reject_alg_not_accepted.json",
@@ -250,8 +250,8 @@
       "note": "hop 1: Hop 1 holds scopes its parent does not cover: drive.Read"
     }
   ],
-  "pass": 21,
+  "pass": 20,
   "fail": 5,
-  "gap": 9,
+  "gap": 10,
   "masked": 0
 }

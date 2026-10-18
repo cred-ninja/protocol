@@ -31,7 +31,7 @@ Cred code is resolved from, in order: `--sdk PATH`, `$CRED_SDK_PATH`, a sibling 
 
 Flags: `--vectors DIR` to point at another vector directory, `--allow-gaps` to exit zero when only GAP rows are present, `--json` for machine output.
 
-Exit code is nonzero on any FAIL. GAP rows also fail the run unless `--allow-gaps` is passed.
+Exit code is nonzero on any FAIL or MASKED row. GAP rows also fail the run unless `--allow-gaps` is passed.
 
 ## What is under test
 
@@ -64,7 +64,7 @@ Scores are only citable with the SDK commit they were taken at. Retained machine
 | 2026-10-07 | `a41366e1eb505b6c8a3b6dcc1d39c6b913e38b2c` (main, PR #45 merged) | 20 of 20, 0 FAIL, 0 GAP | `results/2026-10-07-sdk-a41366e.json` (Node 22.22.0) |
 | 2026-10-13 | `09f9488683a38028eacdff5c6a5610b716415536` (main, cited in draft -01 Implementation Status) | 20 of 20, 0 FAIL, 0 GAP; proposed scope vectors 4 of 4 | `results/2026-10-13-sdk-09f9488.json`, `results/2026-10-13-sdk-09f9488-proposed-scope.json` (Node 22.22.0) |
 | 2026-10-18 | `d4062a9a687dca46f04d2e9f66c6b3c0ce4983fe` (main) | **-02 set (`vectors-02/`):** 5 of 35 PASS, 17 FAIL, 0 GAP, 13 MASKED. -01 set unchanged at 20 of 20 at this commit (not retained separately) | `results/2026-10-18-sdk-d4062a9-vectors-02.json` (Node 22.22.0) |
-| 2026-10-18 | `5b13213bf84470670569dd2d72c4dba6fe8b7911` (branch `feat/asor-02-constraints`, cred-ninja/sdk#56, not main) | **-02 set:** 21 of 35 PASS, 5 FAIL, 9 GAP, 0 MASKED. -01 set 20 of 20 at this commit (not retained separately) | `results/2026-10-18-sdk-5b13213-vectors-02.json` (Node 22.22.0) |
+| 2026-10-18 | `5b13213bf84470670569dd2d72c4dba6fe8b7911` (branch `feat/asor-02-constraints`, cred-ninja/sdk#56, not main) | **-02 set:** 20 of 35 PASS, 5 FAIL, 10 GAP, 0 MASKED. -01 set 20 of 20 at this commit (not retained separately) | `results/2026-10-18-sdk-5b13213-vectors-02.json` (Node 22.22.0) |
 
 The `ff00421` SDK carried constraint ceilings in receipts and enforced asor-01 section 4.3 subsumption, but its `parseConstraints` accepted only numeric `max` and numeric `rank`, while the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank label per section 4.2. Passing `constraints` through would have failed every valid chain, so the runner withheld it and `reject_exceeded_ceiling` stayed GAP. sdk `e92af19` (cred-ninja/sdk PR #41) covers all six section 4.2 types and resolves rank labels through a per-key ordering seeded with the draft's `egress` none < internal < any; the runner now maps `constraints` onto `DelegationChainHop.constraints` and hands the parsed lists to `validateSubDelegation` the way the subdelegate route does. Against an SDK older than `e92af19` the constrained vectors now fail closed as `malformed` at hop 0; that is the correct reading of section 4.2 for an implementation that does not know the `rank` label form.
 
@@ -159,7 +159,7 @@ The -02 Section 6 steps 1 to 5, the audience half of step 8, and the parse-time 
 | `authorization_details[0].constraints` | hop `constraints`, untouched | `order` on `rank` is passed through. Stripping it would let Cred resolve `egress` through `DEFAULT_RANK_ORDERINGS` and turn rows green that Cred cannot read. |
 | `par_hash`, `iat`, `exp` | hop `parentHash`, `iat`, `exp` | Same as -01. |
 
-Not mapped, because Cred has nothing to receive them: `aud` (shape and the step 8 audience check), `cnf`, any `authorization_details` entry after the first, the detail `type`, members of the detail other than `scopes` and `constraints`, and `del_max_depth` on any token but DT_0. A vector whose rule depends only on these is a GAP when Cred accepts it.
+Not mapped, because Cred has nothing to receive them: `aud` (shape and the step 8 audience check), `cnf`, any `authorization_details` entry after the first, the detail `type`, members of the detail other than `scopes` and `constraints`, and `del_max_depth` on any token but DT_0. A vector whose rule depends only on these is a GAP when Cred accepts it. That includes `valid_audience_array.json`: Cred accepts it only because it never reads `aud`, so its accept is a GAP, not a PASS (`ACCEPT_UNMAPPED_02` in run.ts).
 
 Step 1: Cred's receipt verifier (`decodeReceipt` in sdk `packages/server/src/receipt-chain.ts`) takes the algorithm from its configured key and never reads the header `alg`. The runner does the same: the configured algorithm is the vector's `signer.alg`, usable only when `verifier.accepted_algs` lists it. Not covered by any vector, so recorded here rather than measured: Cred also does not deny a header `alg` that differs from the key's algorithm, which -02 step 1 requires.
 
