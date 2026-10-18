@@ -170,10 +170,11 @@ const VECTOR_REASON_OVERRIDES: Record<string, { acceptCredReason: string; note: 
   },
 };
 
-type Row = { vector: string; expect: string; cred: string; result: 'PASS' | 'FAIL' | 'GAP'; note: string };
+type Row = { vector: string; expect: string; cred: string; result: 'PASS' | 'FAIL' | 'GAP' | 'MASKED'; note: string };
 
 function runVector(file: string, vault: VaultApi): Row {
   const data = JSON.parse(readFileSync(join(VECTOR_DIR, file), 'utf8'));
+  if (data.draft === '02') return runVector02(file, data, vault);
   const expect: string = data.expect ?? data.expect_reject_reason;
   const secret = Buffer.from(data.signer.secret_hex, 'hex');
   const now: number = data.now ?? 0;
@@ -263,6 +264,178 @@ function runVector(file: string, vault: VaultApi): Row {
   return { vector: file, expect, cred: 'accept', result: 'GAP', note: 'accepted; declared rejection reason not represented in Cred' };
 }
 
+// ---------------------------------------------------------------------------
+// draft-asor-wimse-agent-delegation-chain-02 vectors (attenu-guard v0.20.0,
+// tests/vectors-02/; byte-identical in attenu-guard-ts v0.14.0). Selected per
+// file by `"draft": "02"`. See README section "-02 vector set" for every
+// mapping below and why each one is there.
+//
+// Claim mapping (-02 Delegation Token to Cred):
+//   client_id                         hop.agentDid (the Acting Agent; Cred's
+//                                     native receipts carry the agent DID in
+//                                     both sub and client_id)
+//   sub                               validateSubDelegation parent.userId /
+//                                     userId (Cred's principal is the user;
+//                                     it must match across a hop, else
+//                                     user_mismatch)
+//   jti                               hop.delegationId
+//   del_depth                         hop.chainDepth
+//   DT_0.del_max_depth                maxDepth = del_max_depth - 1
+//   authorization_details[0].scopes   hop.scopes
+//   authorization_details[0].constraints   hop.constraints, passed through
+//                                     untouched (including `order` on rank)
+//   par_hash                          hop.parentHash
+//   iat, exp                          hop.iat, hop.exp
+// Not mapped, because Cred has no representation for them: aud (shape and
+// the step 8 audience check), cnf, authorization_details beyond index 0,
+// detail `type`, members of the detail other than scopes/constraints, and
+// del_max_depth on any token but DT_0. A rule that depends only on these is
+// a GAP when Cred accepts.
+//
+// Step 1: Cred's own receipt verifier takes the algorithm from the key it is
+// configured with and never from the header. The runner does the same: the
+// configured algorithm is the vector's signer.alg, and it is only usable if
+// the vector's verifier.accepted_algs lists it.
+// ---------------------------------------------------------------------------
+
+const REASON_MAP_02: Record<string, string> = {
+  ...REASON_MAP,
+  user_mismatch: 'principal_altered',
+};
+
+/**
+ * Where each -02 reject vector's single mutation lives, so a matching outcome
+ * name can be checked against its cause. Most -02 vectors carry the canonical
+ * constraint set from DT_0 onward; an implementation that cannot parse that
+ * set rejects every chain at hop 0 as `malformed`, which would read as a PASS
+ * on every vector that happens to declare `malformed`. A row whose outcome
+ * name matches but whose rejection is not at `hop` with a message matching
+ * `cause` is reported MASKED, not PASS.
+ */
+const CAUSE_02: Record<string, { hop: number; cause: RegExp; rule: string }> = {
+  'reject_alg_not_accepted.json': { hop: 0, cause: /signature/, rule: 'step 1, alg not on the verifier list' },
+  'reject_altered_sub_and_par_hash.json': { hop: 2, cause: /parent/, rule: 'step 2 before step 3' },
+  'reject_aud_empty_array.json': { hop: 2, cause: /\baud\b/, rule: 'Section 3, aud shape' },
+  'reject_aud_null.json': { hop: 2, cause: /\baud\b/, rule: 'Section 3, aud shape' },
+  'reject_audience_mismatch.json': { hop: 2, cause: /\baud\b|audience/, rule: 'step 8, leaf audience' },
+  'reject_child_exp_exceeds_parent.json': { hop: 2, cause: /expires/, rule: 'Section 4.3 rule 4 at step 5' },
+  'reject_child_raises_del_max_depth.json': { hop: 2, cause: /del_max_depth|max depth/i, rule: 'Section 4.3 rule 5, per hop' },
+  'reject_cnf_without_confirmation.json': { hop: 2, cause: /\bcnf\b/, rule: 'Section 3, cnf shape' },
+  'reject_constraint_extra_member.json': { hop: 2, cause: /max_rows/, rule: 'Section 4.2, closed constraint object' },
+  'reject_cross_type_lifetime_for_max.json': { hop: 2, cause: /max_rows/, rule: 'Section 4.3, no cross-type inference' },
+  'reject_detail_extra_member.json': { hop: 2, cause: /detail|actions/, rule: 'Section 4, closed detail' },
+  'reject_duplicate_key_type.json': { hop: 2, cause: /max_rows/, rule: 'Section 4.2, (key, type) uniqueness' },
+  'reject_max_lifetime_widened.json': { hop: 2, cause: /max_calls/, rule: 'Section 4.3, max_lifetime subsumption' },
+  'reject_max_subtree_widened.json': { hop: 2, cause: /max_spend/, rule: 'Section 4.3, max_subtree subsumption' },
+  'reject_missing_client_id.json': { hop: 2, cause: /missing required fields/, rule: 'Section 3, client_id required' },
+  'reject_missing_cnf.json': { hop: 1, cause: /\bcnf\b/, rule: 'Section 3, cnf required' },
+  'reject_mixed_case_wildcard.json': { hop: 1, cause: /User\.\*|scope/, rule: 'Section 4.1, invalid scope is malformed' },
+  'reject_newline_scope.json': { hop: 1, cause: /crm\.read|scope/, rule: 'Section 4.1, invalid scope is malformed' },
+  'reject_opaque_case_folded.json': { hop: 1, cause: /user\.read/, rule: 'Section 4.1, no case folding' },
+  'reject_opaque_over_wildcard.json': { hop: 1, cause: /drive\.\*/, rule: 'Section 4.1, opaque never covers wildcard' },
+  'reject_principal_altered.json': { hop: 1, cause: /user/i, rule: 'step 3, principal invariance' },
+  'reject_rank_order_mismatch.json': { hop: 2, cause: /egress/, rule: 'Section 4.3, child order equals parent order' },
+  'reject_rank_outside_order.json': { hop: 2, cause: /egress/, rule: 'Section 4.2, rank must be in order' },
+  'reject_rank_without_order.json': { hop: 2, cause: /egress/, rule: 'Section 4.2, label rank needs order' },
+  'reject_reissued_parent.json': { hop: 2, cause: /parent/, rule: 'Section 5, commitment to the instance' },
+  'reject_root_without_principal.json': { hop: 0, cause: /\bsub\b|principal|user/i, rule: 'Section 3, DT_0 sub non-empty' },
+  'reject_second_detail.json': { hop: 2, cause: /detail/, rule: 'Section 4, exactly one detail' },
+  'reject_unknown_detail_type.json': { hop: 0, cause: /detail/, rule: 'Section 4.4, unknown detail type' },
+  'reject_unsafe_integer.json': { hop: 0, cause: /integer|unsafe/i, rule: 'Section 3, integer above 2^53-1' },
+  'reject_wildcard_over_opaque.json': { hop: 1, cause: /drive\.Read/, rule: 'Section 4.1, wildcard never covers opaque' },
+};
+
+function runVector02(file: string, data: any, vault: VaultApi): Row {
+  const expect: string = data.expect ?? data.expect_reject_reason;
+  const secret = Buffer.from(data.signer.secret_hex, 'hex');
+  const algUsable = Array.isArray(data.verifier?.accepted_algs) && data.verifier.accepted_algs.includes(data.signer.alg);
+  const now: number = data.now ?? 0;
+  const tokens: string[] = data.tokens;
+  const cause = CAUSE_02[file];
+
+  const judge = (credReason: string, hop: number, message: string): Row => {
+    const mapped = REASON_MAP_02[credReason] ?? credReason;
+    const note = `hop ${hop}: ${message}`;
+    if (mapped !== expect) return { vector: file, expect, cred: `reject:${credReason}`, result: 'FAIL', note };
+    if (cause && !(hop === cause.hop && cause.cause.test(message))) {
+      return { vector: file, expect, cred: `reject:${credReason}`, result: 'MASKED', note: `${note} [vector tests ${cause.rule} at hop ${cause.hop}; Cred rejected on something else]` };
+    }
+    return { vector: file, expect, cred: `reject:${credReason}`, result: 'PASS', note };
+  };
+
+  const payloads = tokens.map(payloadOf);
+  const bad = payloads.findIndex((p) => p && typeof p.__decodeError === 'string');
+  if (bad !== -1) {
+    const code: string = payloads[bad].__decodeCode ?? 'syntax';
+    return judge(code === 'syntax' ? 'payload_undecodable' : code, bad, `payload rejected by the strict decoder (${payloads[bad].__decodeError})`);
+  }
+  const root = payloads[0];
+  const maxDepth = typeof root.del_max_depth === 'number' ? root.del_max_depth - 1 : undefined;
+  const detailOf = (p: any) => (Array.isArray(p.authorization_details) ? p.authorization_details[0] : undefined) ?? {};
+
+  const hops = tokens.map((t, i) => {
+    const p = payloads[i];
+    const ad = detailOf(p);
+    return {
+      agentDid: p.client_id,
+      delegationId: p.jti,
+      chainDepth: p.del_depth,
+      scopes: ad.scopes ?? [],
+      iat: p.iat,
+      exp: p.exp,
+      ...(ad.constraints !== undefined ? { constraints: ad.constraints } : {}),
+      signatureValid: algUsable && hs256Valid(t, secret),
+      selfHash: signingInputHash(t),
+      ...(typeof p.par_hash === 'string' ? { parentHash: p.par_hash } : {}),
+    };
+  });
+
+  const chain = vault.verifyDelegationChain(hops, { now, maxDepth, requireParentHash: true });
+  if (!chain.ok) return judge(chain.reason, chain.hop, chain.message);
+
+  const parsed = (value: unknown): any[] | undefined => {
+    if (value === undefined || !vault.parseConstraints) return undefined;
+    const r = vault.parseConstraints(value);
+    return r.ok ? r.constraints : undefined;
+  };
+  for (let i = 1; i < hops.length; i++) {
+    try {
+      const parentConstraints = parsed(hops[i - 1].constraints);
+      const requestedConstraints = parsed(hops[i].constraints);
+      vault.validateSubDelegation({
+        parent: { delegationId: hops[i - 1].delegationId, agentDid: hops[i - 1].agentDid, service: 'attenu', userId: payloads[i - 1].sub, appClientId: 'local', scopesGranted: hops[i - 1].scopes, chainDepth: hops[i - 1].chainDepth, ...(parentConstraints ? { constraints: parentConstraints } : {}) },
+        childAgentDid: hops[i].agentDid,
+        service: 'attenu', userId: payloads[i].sub, appClientId: 'local',
+        requestedScopes: hops[i].scopes,
+        ...(requestedConstraints ? { requestedConstraints } : {}),
+        permission: { allowedScopes: hops[i - 1].scopes, delegatable: true, maxDelegationDepth: maxDepth ?? Number.MAX_SAFE_INTEGER },
+      });
+    } catch (err: any) {
+      const code = err instanceof vault.DelegationChainError ? err.code : 'validation_failed';
+      return judge(code, i, `validateSubDelegation: ${err.message}`);
+    }
+  }
+
+  if (expect === 'accept') return { vector: file, expect, cred: 'accept', result: 'PASS', note: '' };
+  return { vector: file, expect, cred: 'accept', result: 'GAP', note: `accepted; ${cause?.rule ?? 'declared rejection'} is not represented in Cred` };
+}
+
+function sdkCommit(source: string): string | undefined {
+  const m = source.match(/^(.*)\/packages\/vault\/src\/index\.ts$/);
+  if (!m) return undefined;
+  try {
+    const head = readFileSync(join(m[1], '.git', 'HEAD'), 'utf8').trim();
+    if (!head.startsWith('ref: ')) return head;
+    const ref = head.slice(5);
+    const loose = join(m[1], '.git', ref);
+    if (existsSync(loose)) return readFileSync(loose, 'utf8').trim();
+    const packed = readFileSync(join(m[1], '.git', 'packed-refs'), 'utf8').split('\n').find((l) => l.endsWith(` ${ref}`));
+    return packed?.split(' ')[0];
+  } catch {
+    return undefined;
+  }
+}
+
 const { api, source } = await loadVault();
 vaultForDecode = api;
 const files = readdirSync(VECTOR_DIR).filter((f) => f.endsWith('.json')).sort((a, b) => (a.startsWith('valid') ? -1 : b.startsWith('valid') ? 1 : a.localeCompare(b)));
@@ -270,17 +443,21 @@ const rows = files.map((f) => runVector(f, api));
 const pass = rows.filter((r) => r.result === 'PASS').length;
 const fail = rows.filter((r) => r.result === 'FAIL').length;
 const gap = rows.filter((r) => r.result === 'GAP').length;
+const masked = rows.filter((r) => r.result === 'MASKED').length;
+const commit = sdkCommit(source);
 
 if (JSON_OUT) {
-  console.log(JSON.stringify({ source, vectors: VECTOR_DIR, rows, pass, fail, gap }, null, 2));
+  console.log(JSON.stringify({ source, sdkCommit: commit, node: process.version, vectors: VECTOR_DIR, rows, pass, fail, gap, masked }, null, 2));
 } else {
-  console.log(`Cred under test: ${source}`);
+  console.log(`Cred under test: ${source}${commit ? ` (${commit})` : ''}`);
   console.log(`Vectors: ${VECTOR_DIR}\n`);
   console.log('| Vector | Expected | Cred | Result |');
   console.log('|---|---|---|---|');
   for (const r of rows) console.log(`| ${r.vector} | ${r.expect} | ${r.cred} | ${r.result} |`);
-  console.log(`\n${pass}/${rows.length} PASS, ${fail} FAIL, ${gap} GAP`);
+  console.log(`\n${pass}/${rows.length} PASS, ${fail} FAIL, ${gap} GAP${masked ? `, ${masked} MASKED` : ''}`);
   for (const r of rows) if (r.note) console.log(`  ${r.vector}: ${r.note}`);
 }
 
-process.exit(fail > 0 || (gap > 0 && !ALLOW_GAPS) ? 1 : 0);
+// MASKED is not a pass: the declared outcome name came from an unrelated
+// rejection, so the rule the vector isolates was never reached.
+process.exit(fail > 0 || masked > 0 || (gap > 0 && !ALLOW_GAPS) ? 1 : 0);

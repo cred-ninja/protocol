@@ -1,4 +1,4 @@
-# Conformance: draft-asor-wimse-agent-delegation-chain Appendix B vectors (v0.9.0, 20 vectors)
+# Conformance: draft-asor-wimse-agent-delegation-chain Appendix B vectors (-01: v0.9.0, 20 vectors; -02: v0.20.0, 35 vectors)
 
 Runs the interop vectors published with [draft-asor-wimse-agent-delegation-chain-00](https://datatracker.ietf.org/doc/draft-asor-wimse-agent-delegation-chain/) through Cred's shipping delegation chain logic and prints a pass/fail/gap matrix.
 
@@ -48,6 +48,7 @@ Reason mapping from Cred to the draft: `exp_not_monotonic` to `expired`, `parent
 
 - PASS: Cred's outcome and reason match the vector's declaration.
 - FAIL: Cred accepted a chain the vector rejects, rejected one it accepts, or rejected for a different reason. A FAIL is a bug.
+- MASKED (-02 set only): Cred's outcome name matches the vector's declaration, but Cred rejected at a different hop or for a different property than the one the vector isolates, so the rule under test was never reached. Not a pass. The runner exits nonzero on any MASKED row.
 - GAP: Cred accepted a chain the vector rejects because the property being tested is not represented in Cred's model. No vector currently GAPs against sdk `b1bfec0` or later. `reject_exceeded_ceiling` was a GAP through sdk `ff00421`, and `reject_unsafe_integer` and `reject_duplicate_member` through `e92af19`; see the pinned runs below.
 
 ## Pinned runs
@@ -62,6 +63,7 @@ Scores are only citable with the SDK commit they were taken at. Retained machine
 | 2026-10-07 | `b1bfec02e941378164aba380bde15d831aaf6636` | 20 of 20, 0 FAIL, 0 GAP | `results/2026-10-07-sdk-b1bfec0.json` (Node 22.22.0) |
 | 2026-10-07 | `a41366e1eb505b6c8a3b6dcc1d39c6b913e38b2c` (main, PR #45 merged) | 20 of 20, 0 FAIL, 0 GAP | `results/2026-10-07-sdk-a41366e.json` (Node 22.22.0) |
 | 2026-10-13 | `09f9488683a38028eacdff5c6a5610b716415536` (main, cited in draft -01 Implementation Status) | 20 of 20, 0 FAIL, 0 GAP; proposed scope vectors 4 of 4 | `results/2026-10-13-sdk-09f9488.json`, `results/2026-10-13-sdk-09f9488-proposed-scope.json` (Node 22.22.0) |
+| 2026-10-18 | `d4062a9a687dca46f04d2e9f66c6b3c0ce4983fe` (main) | **-02 set (`vectors-02/`):** 5 of 35 PASS, 17 FAIL, 0 GAP, 13 MASKED. -01 set unchanged at 20 of 20 at this commit (not retained separately) | `results/2026-10-18-sdk-d4062a9-vectors-02.json` (Node 22.22.0) |
 
 The `ff00421` SDK carried constraint ceilings in receipts and enforced asor-01 section 4.3 subsumption, but its `parseConstraints` accepted only numeric `max` and numeric `rank`, while the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank label per section 4.2. Passing `constraints` through would have failed every valid chain, so the runner withheld it and `reject_exceeded_ceiling` stayed GAP. sdk `e92af19` (cred-ninja/sdk PR #41) covers all six section 4.2 types and resolves rank labels through a per-key ordering seeded with the draft's `egress` none < internal < any; the runner now maps `constraints` onto `DelegationChainHop.constraints` and hands the parsed lists to `validateSubDelegation` the way the subdelegate route does. Against an SDK older than `e92af19` the constrained vectors now fail closed as `malformed` at hop 0; that is the correct reading of section 4.2 for an implementation that does not know the `rank` label form.
 
@@ -130,3 +132,84 @@ Classification by precedence (literal, wildcard, opaque, else malformed). A wild
 | valid_opaque_exact.json | accept | `User.Read`, `repo:status` over `repo:status`: provider-native scopes narrow by exact equality. Under -01 4.1 as written both tokens are malformed; this is the gap the opaque class closes. |
 
 Against cred-ninja/sdk with `classifyScope` (PR #43): 4 of 4. Against sdk main at `9995d53`: 3 of 4, `reject_wildcard_over_opaque` accepted, which is the behaviour the PR fixes.
+
+## -02 vector set (`vectors-02/`, 35 vectors)
+
+### Source and pin
+
+The 35 files in `vectors-02/` are copied verbatim from [attenu-io/attenu-guard](https://github.com/attenu-io/attenu-guard) at tag `v0.20.0` (commit `89e97cd617236e1bec7739371a71e2cb0e01b649`), path `tests/vectors-02/`, which is the second, separately named set that [draft-asor-wimse-agent-delegation-chain-02](https://www.ietf.org/archive/id/draft-asor-wimse-agent-delegation-chain-02.txt) Section 11 and Appendix B describe. The same 35 files are byte-identical in [attenu-io/attenu-guard-ts](https://github.com/attenu-io/attenu-guard-ts) at tag `v0.14.0` (commit `691c51055fc6d84a8017383feb1db2239d6bba40`), path `test/fixtures/vectors/draft02/`. Only the `.json` vectors were copied; upstream's `README.md` (file format, scoring rules) and `generate_02.py` stay upstream. The -01 twenty in `vectors/` are untouched.
+
+Run: `npx tsx run.ts --sdk ../../../sdk --vectors vectors-02`. The runner selects the -02 mapping per file from `"draft": "02"`.
+
+### What a run scores
+
+The -02 Section 6 steps 1 to 5, the audience half of step 8, and the parse-time rules of Sections 3, 4 and 4.4, as upstream scores them. Steps 6 (holder binding) and 7 (status list) are not in the set. No vector carries an action, so the cumulative-constraint denial at step 8 is not scored here.
+
+### Claim mapping (-02 token to Cred)
+
+| -02 claim | Cred input | Why |
+|---|---|---|
+| `client_id` | hop `agentDid` | The Acting Agent. Cred's native receipts carry the agent DID in both `sub` and `client_id`; under -02 only `client_id` names the agent. |
+| `sub` | `validateSubDelegation` `parent.userId` / `userId` | The Principal. Cred's principal is the user, and `validateSubDelegation` requires it to match across a hop (`user_mismatch`; `verifyReceiptChain` checks the same as `context_mismatch`). This is real Cred code, called the way `POST /api/v1/subdelegate` calls it. -01 runs pass a fixed `default` here. |
+| `jti` | hop `delegationId` | |
+| `del_depth` | hop `chainDepth` | |
+| `DT_0.del_max_depth` | `maxDepth = del_max_depth - 1` | Same as -01. |
+| `authorization_details[0].scopes` | hop `scopes` | |
+| `authorization_details[0].constraints` | hop `constraints`, untouched | `order` on `rank` is passed through. Stripping it would let Cred resolve `egress` through `DEFAULT_RANK_ORDERINGS` and turn rows green that Cred cannot read. |
+| `par_hash`, `iat`, `exp` | hop `parentHash`, `iat`, `exp` | Same as -01. |
+
+Not mapped, because Cred has nothing to receive them: `aud` (shape and the step 8 audience check), `cnf`, any `authorization_details` entry after the first, the detail `type`, members of the detail other than `scopes` and `constraints`, and `del_max_depth` on any token but DT_0. A vector whose rule depends only on these is a GAP when Cred accepts it.
+
+Step 1: Cred's receipt verifier (`decodeReceipt` in sdk `packages/server/src/receipt-chain.ts`) takes the algorithm from its configured key and never reads the header `alg`. The runner does the same: the configured algorithm is the vector's `signer.alg`, usable only when `verifier.accepted_algs` lists it. Not covered by any vector, so recorded here rather than measured: Cred also does not deny a header `alg` that differs from the key's algorithm, which -02 step 1 requires.
+
+### Reason mapping (Cred to -02 Table 2)
+
+Everything in the -01 mapping, plus `user_mismatch` to `principal_altered`. No per-vector overrides: -02 requires an invalid scope to be `malformed` before subsumption, and Cred's legacy exact-match allowance reports `not_narrower` instead, so the -01 overrides for invalid wildcards do not carry over. That difference is a FAIL in this set.
+
+### Cause check
+
+Most -02 vectors carry the canonical constraint set from DT_0 onward (`rank` with `order`, `max_lifetime`, and `max` plus `max_subtree` on one key). An implementation that cannot parse that set rejects every such chain at hop 0 as `malformed`, which matches the declared name of every vector that expects `malformed` while testing nothing. `CAUSE_02` in run.ts records, per reject vector, the hop its single mutation sits at and a pattern the rejection message must match. A matching name without a matching cause is MASKED.
+
+### Measured matrix
+
+Against cred-ninja/sdk `d4062a9a687dca46f04d2e9f66c6b3c0ce4983fe` (main, 2026-10-18), Node 22.22.0: 5 of 35 PASS, 17 FAIL, 0 GAP, 13 MASKED.
+
+| Vector | Expected | Cred | Result |
+|---|---|---|---|
+| valid_unknown_constraint_identical.json | accept | reject:malformed | FAIL |
+| valid_range_min_max.json | accept | reject:malformed | FAIL |
+| valid_opaque_exact.json | accept | accept | PASS |
+| valid_chain.json | accept | reject:malformed | FAIL |
+| valid_audience_array.json | accept | reject:malformed | FAIL |
+| reject_alg_not_accepted.json | signature_invalid | reject:malformed | FAIL |
+| reject_altered_sub_and_par_hash.json | par_hash_mismatch | reject:malformed | FAIL |
+| reject_aud_empty_array.json | malformed | reject:malformed | MASKED |
+| reject_aud_null.json | malformed | reject:malformed | MASKED |
+| reject_audience_mismatch.json | audience_mismatch | reject:malformed | FAIL |
+| reject_child_exp_exceeds_parent.json | expired | reject:malformed | FAIL |
+| reject_child_raises_del_max_depth.json | not_narrower | reject:malformed | FAIL |
+| reject_cnf_without_confirmation.json | malformed | reject:malformed | MASKED |
+| reject_constraint_extra_member.json | malformed | reject:malformed | MASKED |
+| reject_cross_type_lifetime_for_max.json | not_narrower | reject:malformed | FAIL |
+| reject_detail_extra_member.json | malformed | reject:malformed | MASKED |
+| reject_duplicate_key_type.json | malformed | reject:malformed | MASKED |
+| reject_max_lifetime_widened.json | not_narrower | reject:malformed | FAIL |
+| reject_max_subtree_widened.json | not_narrower | reject:malformed | FAIL |
+| reject_missing_client_id.json | malformed | reject:malformed | MASKED |
+| reject_missing_cnf.json | malformed | reject:malformed | MASKED |
+| reject_mixed_case_wildcard.json | malformed | reject:not_narrower | FAIL |
+| reject_newline_scope.json | malformed | reject:not_narrower | FAIL |
+| reject_opaque_case_folded.json | not_narrower | reject:not_narrower | PASS |
+| reject_opaque_over_wildcard.json | not_narrower | reject:not_narrower | PASS |
+| reject_principal_altered.json | principal_altered | reject:malformed | FAIL |
+| reject_rank_order_mismatch.json | not_narrower | reject:malformed | FAIL |
+| reject_rank_outside_order.json | malformed | reject:malformed | MASKED |
+| reject_rank_without_order.json | malformed | reject:malformed | MASKED |
+| reject_reissued_parent.json | par_hash_mismatch | reject:malformed | FAIL |
+| reject_root_without_principal.json | malformed | reject:malformed | MASKED |
+| reject_second_detail.json | malformed | reject:malformed | MASKED |
+| reject_unknown_detail_type.json | malformed | reject:malformed | MASKED |
+| reject_unsafe_integer.json | malformed | reject:unsafe_integer | PASS |
+| reject_wildcard_over_opaque.json | not_narrower | reject:not_narrower | PASS |
+
+Every FAIL and MASKED row except two traces to hop 0: sdk main's `parseConstraints` rejects `order` on `rank` (closed to `key` plus one type member), does not know `max_lifetime` or `max_subtree`, and treats two constraints on one key as a duplicate even when their types differ. That one parser gap fails every valid chain that carries constraints and masks every rule behind it. The two exceptions measure a real scope difference: `reject_mixed_case_wildcard` (`User.*`) and `reject_newline_scope` (`crm.read` plus a line feed) are rejected as `not_narrower` through the legacy exact-match allowance, where -02 Section 4.1 requires `malformed`.
