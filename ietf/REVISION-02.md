@@ -19,7 +19,7 @@ Submission steps (Kieran only): settle the two decisions above, set `date:`, run
 
 Pass of 2026-10-20 (after Kieran's list replies of 2026-10-20 13:02 UTC):
 - New Section 5.5 Chain-Verifiable Profile: tokens verified away from the issuing DS, including user-minted ones, use the asor -02 `agent_delegation` format unchanged. A DS MAY issue them (no `cred_delegation`, no top-level `constraints`, opaque provider scopes, mapping recorded in the receipt, no `prf` in the token) and MAY read and check ones it did not issue. Using such a token as the root of a DS chain is stated as -03 work, as Kieran told Caleb.
-- Section 8 Revocation: `revoked_count` is invalidation, not closure; the exchanged-token path is partial until expiry unless the RS checks at commit; cascade holds within one DS, cross-domain enforcement out of scope. Both were promised to Watts on the oauth list.
+- Section 7 Revocation: `revoked_count` is invalidation, not closure; the exchanged-token path is partial until expiry unless the RS checks at commit; cascade holds within one DS, cross-domain enforcement out of scope. Both were promised to Watts on the oauth list.
 - Section 4.1: ML-DSA MAY alongside Ed25519 and P-256 (MUST accept); every verifier holds a local accepted-algorithm list (asor -02 Section 6 step 1). New informative reference FIPS204.
 - Related Work, Nelson paragraph: principal-signed receipts add assurance only with a user-held, user-verified key.
 - New Security Considerations 10.8 Long-Term Evidence: classical-signature receipts need anchoring for long retention.
@@ -30,3 +30,5 @@ Pass of 2026-10-20 (after Kieran's list replies of 2026-10-20 13:02 UTC):
 CHECK BEFORE UPLOAD: Caleb's 2026-10-20 15:10 UTC mail is signed "Caleb Dyer" while his address and the register say Dayton. Confirm the surname for the Acknowledgments and Changes entries.
 
 Build: references fetched from bib.ietf.org are blocked in the cloud container, so the build used a .refcache seeded from the RFC references already in the committed -02 .xml (KRAMDOWN_OFFLINE=1). Before editing, that setup reproduced the committed -02 .txt byte for byte. Rendered text: no line over 72 columns, ASCII only. idnits not run. `date:` still reads 2026-10-15; set it at upload.
+
+Review round, 2026-10-20 (CodeRabbit on cred-ninja/protocol#13): ASOR moved to normative references; Section 5.5 scope bullet now says ASOR classifies scopes by bytes, so a provider string like `crm.read` is literal and the DS must pick strings whose classification admits no more than the mapped capability; Section 7 adds that offline verification of Section 5.5 tokens is outside the DS's revocation bounds; Section 10.8 no longer assumes consent and audit records are signed.
