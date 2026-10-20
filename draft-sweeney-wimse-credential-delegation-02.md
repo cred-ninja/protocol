@@ -91,7 +91,7 @@ The IETF landscape for agent authorization moved quickly during 2026. The OAuth 
 
 **draft-nennemann-wimse-ect** ([ECT]; expired): Execution Context Tokens define an audit record format. This protocol's audit chain is designed to be ECT-compatible.
 
-**draft-goswami-agentic-jwt** ([AGENTIC-JWT]): Proposes agent checksums and intent binding. The `agent_checksum` claim ("Agent Authentication") remains defined for compatibility, with no dependency taken. A US patent has been filed on the underlying mechanism; this specification avoids the patented specifics.
+**draft-goswami-agentic-jwt** ([AGENTIC-JWT]): Proposes agent checksums and intent binding. A US patent has been filed on that mechanism. This document defines no agent checksum or intent-binding claim and depends on no part of that draft; earlier revisions defined an `agent_checksum` claim, which this revision removes.
 
 ### Design Principles
 
@@ -244,7 +244,6 @@ Optional claims:
 |-------|-------|-------|
 | `agent_model` | Model identifier | Vendor-prefixed, e.g., `"vendor:model-id"` |
 | `agent_operator` | Operator DID or URL | Organization running the agent |
-| `agent_checksum` | SHA-256 hash | Intent binding per [AGENTIC-JWT]; advisory only due to IPR |
 
 ### Agent Lifecycle
 
@@ -496,7 +495,7 @@ The default DT lifetime of 15 minutes limits the blast radius of any single toke
 
 ### Model Identity and Substitution
 
-The `agent_model` and `agent_checksum` claims are self-asserted. A credential valid for an agent remains valid if the operator substitutes the underlying model, a threat class raised against the AIMS predecessor framework in March 2026. Verifying model identity requires attestation of the agent runtime and is out of scope for this document. Deployments that need it should treat these claims as advisory policy input, not proof, and look to remote attestation work in the RATS WG.
+The `agent_model` claim is self-asserted. A credential valid for an agent remains valid if the operator substitutes the underlying model, a threat class raised against the AIMS predecessor framework in March 2026. Verifying model identity requires attestation of the agent runtime and is out of scope for this document. Deployments that need it should treat these claims as advisory policy input, not proof, and look to remote attestation work in the RATS WG.
 
 ### Long-Term Evidence
 
@@ -524,6 +523,7 @@ This document requests registration of:
 - "Agent Identity": ML-DSA permitted alongside Ed25519 and P-256; every verifier holds a local list of accepted algorithms, as in [ASOR] Section 6 step 1.
 - Related Work, Nelson paragraph: when a principal-signed receipt adds assurance. New "Long-Term Evidence" in Security Considerations.
 - "Implementation Status": SDK described at commit 87eabb7, with results against the [ASOR] thirty-five-vector set.
+- "Agent Authentication": the optional `agent_checksum` claim is removed, and Related Work states that this document takes nothing from [AGENTIC-JWT], on which a patent has been filed.
 - References: [ASOR] -01 to -02 and moved to normative, since "Chain-Verifiable Profile" depends on its format and verification algorithm; Nelson -13 to -14; [FIPS204] informative.
 
 ## Changes from -00
