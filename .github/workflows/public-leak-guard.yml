@@ -1,0 +1,90 @@
+name: Public Leak Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    # "edited" re-runs the PR text check when a title or body changes.
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: leak-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Standards registers (thread positions, pending replies, sweep reports) are
+# built from private mail and live in cred-ninja/standards-private. These
+# markers are what that content looks like: Gmail message, thread and draft
+# ids, off-list replies, and register stances. Same rules as cred-ninja/sdk.
+jobs:
+  leak-guard:
+    name: Block Private Correspondence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PRIVATE_MARKERS: 'Gmail (draft|drafts|thread|message|messages|id|ids|evidence|checked|delay|HOLD)\b|[Pp]rivate Gmail\b|Gmail r-?[0-9]{10,}|Gmail[^|)]{0,40}\b[0-9a-f]{16}\b|\b[Oo]ff-list\b|\b[Pp]rivately\b|Stance: (SPEAK|WATCH|DROP)\b|\b[Ss]peak[- ]by\b'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block register paths
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git ls-files | grep -nE '(^|/)reports/'; then
+            echo "::error::Register path found. Registers belong in cred-ninja/standards-private."
+            exit 1
+          fi
+
+      - name: Block private correspondence markers in tracked files
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+
+            case "$path" in
+              .github/workflows/*|*.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.pdf)
+                continue
+                ;;
+            esac
+
+            if [[ -f "$path" ]] && grep -nE "$PRIVATE_MARKERS" "$path"; then
+              echo "::error file=$path::Private correspondence marker found in public file. Registers belong in cred-ninja/standards-private."
+              fail=1
+            fi
+          done < <(git ls-files)
+
+          exit "$fail"
+
+      - name: Block private correspondence markers in PR text and commits
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          markers="$PRIVATE_MARKERS|(^|[[:space:]/])reports/"
+          fail=0
+
+          if printf '%s\n%s\n' "$PR_TITLE" "$PR_BODY" | grep -nE "$markers"; then
+            echo "::error::Private correspondence marker found in the PR title or body."
+            fail=1
+          fi
+
+          if git log --format='%H%n%B' "$BASE_SHA..$HEAD_SHA" | grep -nE "$markers"; then
+            echo "::error::Private correspondence marker found in a commit message on this PR."
+            fail=1
+          fi
+
+          exit "$fail"
