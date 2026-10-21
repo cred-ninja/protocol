@@ -77,7 +77,11 @@ jobs:
           markers="$PRIVATE_MARKERS|(^|[[:space:]/])reports/"
           fail=0
 
-          if printf '%s\n%s\n' "$PR_TITLE" "$PR_BODY" | grep -nE "$markers"; then
+          # CodeRabbit writes its own summary of the diff into the PR body. The diff
+          # itself is checked file by file above, so skip that generated block.
+          body=$(printf '%s\n' "$PR_BODY" | sed '/<!-- This is an auto-generated comment: release notes by coderabbit.ai -->/,/<!-- end of auto-generated comment: release notes by coderabbit.ai -->/d')
+
+          if printf '%s\n%s\n' "$PR_TITLE" "$body" | grep -nE "$markers"; then
             echo "::error::Private correspondence marker found in the PR title or body."
             fail=1
           fi
