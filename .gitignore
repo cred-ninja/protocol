@@ -1,2 +1,6 @@
 # kramdown-rfc bibxml cache written by kdrfc
 ietf/.refcache/
+
+# Standards-work registers and sweep reports are built from private mail.
+# They live in the private cred-ninja/standards-private repo, never here.
+reports/
