@@ -138,54 +138,27 @@ Credential Exercise:
 
 ## Architecture Overview
 
-~~~
-+------------------------------------------------------+
-|                    SUBJECT (User)                    |
-|  1. Connects services (OAuth)                        |
-|  2. Sets delegation policies                         |
-|  3. Approves consent requests (CIBA)                 |
-+--------------------------+---------------------------+
-                           |
-                           v
-+------------------------------------------------------+
-|              DELEGATION SERVER (DS)                  |
-|                                                      |
-|  +-------------+  +------------+  +--------------+   |
-|  | Credential  |  | Delegation |  |   Consent    |   |
-|  |   Vault     |  |   Engine   |  |   Manager    |   |
-|  |             |  |            |  |   (CIBA)     |   |
-|  | OAuth tokens|  | DT issue   |  |              |   |
-|  | API keys    |  | Attenuation|  | Approve/Deny |   |
-|  | Refresh tkns|  | Chain vrfy |  | Policy eval  |   |
-|  +------+------+  +------------+  +--------------+   |
-|         |                                            |
-|  +------+---------------------------------------+    |
-|  |               Exercise Proxy                 |    |
-|  |  Validates DT -> Retrieves cred -> Calls RS  |    |
-|  |  Returns API response (never raw credential) |    |
-|  +----------------------------------------------+    |
-|                                                      |
-|  +----------------------------------------------+    |
-|  |           Revocation & Audit                 |    |
-|  |  Synchronous cascade | Tamper-evident log    |    |
-|  +----------------------------------------------+    |
-+--------------------------+---------------------------+
-                           |
-                           v
-+------------------------------------------------------+
-|                      AGENT                           |
-|                                                      |
-|  1. Generates ephemeral did:key                      |
-|  2. Authenticates via JWT Bearer (RFC 7523)          |
-|  3. Requests delegation (capabilities + constraints) |
-|  4. Receives DT (DPoP-bound, capability-shaped)      |
-|  5. Exercises credentials via DS /exercise endpoint  |
-|  6. Sub-delegates via attenuation (optional)         |
-|                                                      |
-|  TRUST BOUNDARY: Agent sees DT + API responses only  |
-|  Agent NEVER sees: raw tokens, refresh tokens, keys  |
-+------------------------------------------------------+
-~~~
+```mermaid
+flowchart TB
+    subgraph SUBJECT["Subject (User)"]
+        S1["1. Connects services (OAuth)<br/>2. Sets delegation policies<br/>3. Approves consent requests (CIBA)"]
+    end
+    subgraph DS["Delegation Server (DS)"]
+        direction TB
+        VAULT["Credential Vault<br/>OAuth tokens, API keys,<br/>refresh tokens"]
+        ENGINE["Delegation Engine<br/>DT issue, attenuation,<br/>chain verify"]
+        CONSENT["Consent Manager (CIBA)<br/>approve/deny, policy eval"]
+        PROXY["Exercise Proxy<br/>validates DT, retrieves credential, calls RS;<br/>returns API response, never the raw credential"]
+        AUDIT["Revocation and Audit<br/>synchronous cascade, tamper-evident log"]
+        VAULT --> PROXY
+    end
+    subgraph AGENT["Agent"]
+        A1["1. Generates ephemeral did:key<br/>2. Authenticates via JWT Bearer (RFC 7523)<br/>3. Requests delegation (capabilities + constraints)<br/>4. Receives DT (DPoP-bound, capability-shaped)<br/>5. Exercises credentials via DS /exercise endpoint<br/>6. Sub-delegates via attenuation (optional)"]
+        TBND["Trust boundary: the Agent sees the DT and API responses only,<br/>never raw tokens, refresh tokens or keys"]
+    end
+    SUBJECT --> DS
+    DS --> AGENT
+```
 
 **Critical architectural property:** The Agent's trust boundary extends only to the network interface of the Delegation Server. The Agent never crosses into the Vault. This eliminates credential theft as an attack surface: there is nothing for a compromised agent to exfiltrate.
 
