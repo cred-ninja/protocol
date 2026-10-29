@@ -99,7 +99,7 @@ The IETF landscape for agent authorization moved quickly during 2026. The OAuth 
 
 **Attenuation is structural.** Agents cannot widen authority at any delegation hop. This is enforced by the Delegation Server, not by trusting agents. Inspired by UCAN attenuation semantics and the object-capability model [MILLER-2006].
 
-**Credentials are never possessed.** Agents receive and exercise delegated authority through the Delegation Server. Raw credentials never cross the boundary to the agent host. This architecturally eliminates the confused deputy attack surface for credential theft [CONFUSED-DEPUTY].
+**Credentials are never possessed.** Agents receive and exercise delegated authority through the Delegation Server. Raw credentials never cross the boundary to the agent host: the underlying credential is never delivered to the Agent, so an Agent turned into a confused deputy [CONFUSED-DEPUTY] cannot leak it. This does not protect the credential at the DS itself ("Trusted Delegation Server").
 
 **Revocation is synchronous.** A user revoking delegation takes effect within the SLA defined in "Revocation". Eventual consistency is not acceptable for credential revocation in adversarially-promptable systems.
 
@@ -460,7 +460,7 @@ DPoP [RFC9449] prevents Delegation Token theft and replay by requiring cryptogra
 
 ### Prompt Injection Containment
 
-Because credentials never reach the agent host, a successful prompt injection attack cannot exfiltrate credentials. The agent can only exercise capabilities already granted in its DT, and only via the DS `/exercise` endpoint. The blast radius of a compromised agent is bounded by its current DT's `authorization_details`.
+Because the underlying credential is never delivered to the Agent, a successful prompt injection attack on the Agent cannot exfiltrate it. That does not cover the DS itself ("Trusted Delegation Server") or a credential that an upstream response reflects or mints. The agent can only exercise capabilities already granted in its DT, and only via the DS `/exercise` endpoint. The blast radius of a compromised agent is bounded by its current DT's `authorization_details`.
 
 ### Chain Depth Limits
 
@@ -506,7 +506,7 @@ This document requests registration of:
 - "Agent Identity": ML-DSA permitted alongside Ed25519 and P-256; every verifier holds a local list of accepted algorithms, as in [ASOR] Section 6 step 1.
 - Related Work, Nelson paragraph: updated to -15, which binds the delegatee by key thumbprint and states that key custody is attested out of band; a principal-signed receipt adds assurance where that attestation shows a user-held, user-verified key. New "Long-Term Evidence" in Security Considerations.
 - "Implementation Status": SDK described at commit 87eabb7, with results against the [ASOR] thirty-five-vector set; notes that the SDK's rejection of unknown constraint types at parse time is stricter than "Constraint Ceilings". Related Work notes what [ASOR] -03 changes and that Cred has not been run against its thirty-six-file set.
-- Limits stated: after the architecture figure, the claim that credential theft is eliminated is bounded to the Agent; "DPoP Binding" states that a DPoP proof covers method and URI, not the operation and parameters in the request body; new "Trusted Delegation Server" in Security Considerations states that the DS is trusted with the deposited credentials and what its signed receipts do and do not prove.
+- Limits stated: after the architecture figure, in "Design Principles", and in "Prompt Injection Containment", the claim that credential theft is eliminated is bounded to the Agent; "DPoP Binding" states that a DPoP proof covers method and URI, not the operation and parameters in the request body; new "Trusted Delegation Server" in Security Considerations states that the DS is trusted with the deposited credentials and what its signed receipts do and do not prove.
 - "Agent Authentication": the optional `agent_checksum` claim is removed, and Related Work states that this document takes nothing from [AGENTIC-JWT], on which a patent has been filed.
 - References: [ASOR] -01 to -02 and moved to normative, since "Chain-Verifiable Profile" depends on its format and verification algorithm; Nelson -13 to -15; [FIPS204], [RFC7638], and [RFC8785] informative.
 

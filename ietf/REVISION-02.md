@@ -65,5 +65,10 @@ Remaining for Kieran before upload:
 - Whether to move ASOR to -03 and refresh the niyikiza (-02) and ni (-04) references; idnits still flags all three as outdated.
 - IPR check at https://datatracker.ietf.org/ipr/ for the cited drafts, above all ASOR.
 - Per-key mode marker for cumulative bounds, and the S+L admission bound raised for Section 7. The unknown-constraint-type divergence from the 2026-10-28 list is closed by this pass.
-- Left as they are, outside the approved edits: Section 1.3 Design Principles ("architecturally eliminates the confused deputy attack surface for credential theft") and Section 10.4 Prompt Injection Containment ("cannot exfiltrate credentials"). Both carry the overclaim that was bounded after Figure 1; consider bounding them the same way.
 - Upload the .xml at https://datatracker.ietf.org/submit/ before 2026-11-02 23:59 UTC.
+
+Follow-up, 2026-10-29 (approved after the pass above): the two remaining credential-theft overclaims are bounded the same way as the sentence after Figure 1.
+- Section 1.3 Design Principles: "architecturally eliminates the confused deputy attack surface for credential theft" now reads that the underlying credential is never delivered to the Agent, so an Agent turned into a confused deputy cannot leak it, and that this does not protect the credential at the DS itself (Section 10.9).
+- Section 10.4 Prompt Injection Containment: "cannot exfiltrate credentials" now reads that a prompt injection attack on the Agent cannot exfiltrate the underlying credential, which is never delivered to it, and that this does not cover the DS itself (Section 10.9) or a credential an upstream response reflects or mints.
+- Changes from -01 entry "Limits stated" now names both sections. Anchors added for 1.3 and 10.4 (no rendered change).
+- Rebuilt; checks as above: no line over 72 columns, ASCII only, svgcheck passes, idnits 0 errors, 0 flaws, 5 warnings, 5 comments (same set). Root readable .md mirrored.
