@@ -48,12 +48,12 @@ G carries everything the root Delegation Token and its root receipt will commit 
 | `subject` | object | `{"ns": <namespace>, "id": <identifier>}`. `ns` names the identifier namespace (for example an issuer URL); `id` is the stable Subject identifier within it, equal to the outer `sub` the chain will preserve. |
 | `consent_id` | string | The consent record identifier the root DT will carry. Allocated by the DS before the ceremony. |
 | `root_jti` | string | The preallocated `jti` of the root Delegation Token. |
-| `approval_key` | object | `{"kid": <string>, "epoch": <integer>}`. The enrolled approval key identifier and the enrollment epoch it belongs to (Section 5). |
+| `approval_key` | object | `{"kid": <string>, "epoch": <integer>}`. The enrolled approval key identifier and the enrollment epoch it belongs to (Section 5). Under the WebAuthn profile (Section 4a), `kid` is the credential ID octets encoded as unpadded base64url (RFC 4648 Section 5); see Section 4a for its use. |
 | `account` | object | `{"provider": <string>, "account": <string>}`. The immutable binding to the upstream account: the provider identifier and the provider's stable account identifier (for example an OpenID Connect `iss` and `sub` pair rendered as one string). Never a display name, email address, or Vault handle. |
 | `agent` | object | `{"did": <Agent DID>, "operator": <string>, "jkt": <string>}`. The initial Agent's DID, its `agent_operator` value, and the RFC 7638 JWK thumbprint (SHA-256, base64url) of the key the root DT's `cnf.jkt` will name under RFC 9449. |
 | `authorization_details` | array | The complete RFC 9396 capability array the root DT will carry, verbatim. |
-| `constraints` | array | The complete constraint ceiling array (Section 5.3), verbatim. An unconstrained grant carries `[]`. |
-| `redelegation` | object | `{"allowed": <boolean>, "max_depth": <integer>}`. `max_depth` counts hops below the root; `allowed: false` requires `max_depth: 0`. |
+| `constraints` | array | The complete constraint ceiling array (Section 5.3), verbatim. An unconstrained grant carries `[]`, and the root DT then carries `"constraints": []` explicitly (see below). |
+| `redelegation` | object | `{"allowed": <boolean>, "max_depth": <integer>}`. `max_depth` counts hops below the root and MUST be 0 or greater; `allowed: false` requires `max_depth: 0`. |
 | `nbf` | integer | Start of the grant's validity interval. |
 | `exp` | integer | End of the grant's validity interval. Bounds every token and reissuance under this consent. |
 | `approve_by` | integer | Approval deadline. Evidence verified after this time is rejected, and `approve_by` MUST NOT be later than `exp`. |
@@ -62,6 +62,7 @@ G carries everything the root Delegation Token and its root receipt will commit 
 Defaults and units:
 
 - Every member is REQUIRED. There are no omitted-member defaults; the producer writes the value it means. A grant that permits no redelegation carries `{"allowed": false, "max_depth": 0}`, and a grant with no ceilings carries `"constraints": []`.
+- Same representation in G and the token. Section 5.3 of -02 makes `constraints` OPTIONAL on a root token, so an unconstrained root DT could omit it while G carries `[]`. A root DT issued under this profile, and every reissued root DT under the same consent (Section 6), MUST carry `constraints`, and MUST carry it as an explicit empty array when G's `constraints` is `[]`. This applies only to root tokens issued under the root-approval profile; it does not change -02 for other tokens, and it does not apply to tokens under the chain-verifiable profile of Section 5.5, which carry no top-level `constraints`.
 - Times are NumericDate values (integer seconds since the epoch, UTC). Fractional seconds are invalid.
 - Integers MUST be within the range exactly representable by an IEEE 754 binary64 value, as RFC 8785 requires. Quantities inside `constraints` keep the units their `key` defines; G adds no unit conversion.
 - Strings are compared as exact code point sequences. No case folding or Unicode normalization is applied.
@@ -81,7 +82,7 @@ Input validation happens before canonicalization. A producer or verifier MUST re
 
 - is not well-formed I-JSON: duplicate member names, lone surrogates, or numbers outside the binary64 range;
 - carries a member not defined for its `purpose` and `version`, or omits a REQUIRED member;
-- has a member of the wrong type, a non-integer time, `approve_by` later than `exp`, `nbf` not earlier than `exp`, `redelegation.allowed` false with a non-zero `max_depth`, or a `constraints` array that is malformed under Section 5.3;
+- has a member of the wrong type, a non-integer time, `approve_by` later than `exp`, `nbf` not earlier than `exp`, a negative `redelegation.max_depth`, `redelegation.allowed` false with a non-zero `max_depth`, or a `constraints` array that is malformed under Section 5.3;
 - names a `ds`, `tenant`, or `approval_key` the verifier does not expect for this ceremony.
 
 Canonicalizing first and validating afterwards lets two parties compute the same D over inputs they parsed differently. Rejecting first removes that class of disagreement.
@@ -100,7 +101,9 @@ The approval client calls `navigator.credentials.get()` (W3C Web Authentication 
 - `allowCredentials` containing only the credential ID enrolled as `approval_key.kid` at `approval_key.epoch`;
 - `userVerification: "required"`.
 
-The verifier MUST perform the full assertion verification procedure of WebAuthn Level 3 Section 7.2, including: `type` is `"webauthn.get"`; `challenge` decodes to exactly D; `origin` is on the verifier's allowlist for this deployment; cross-origin and `topOrigin` values are rejected unless the verifier's policy names them; `rpIdHash` matches the expected RP ID; the UP and UV flags are both set; the credential ID is the enrolled one; the signature verifies over `authenticatorData || SHA-256(clientDataJSON)` under the enrolled credential public key with an algorithm on the verifier's allowlist; and signature counter handling follows the verifier's policy.
+Credential ID encoding. Under this profile `approval_key.kid` is the credential ID octets (WebAuthn `rawId`) encoded as unpadded base64url (RFC 4648 Section 5). The same encoding is used everywhere `kid` appears: the enrollment record stores the credential ID in this form, G carries it, and the approval client and verifier decode `kid` to obtain the octets placed in `allowCredentials[].id` and compared with the asserted credential ID. No other encoding of the credential ID (padded, standard base64, hex) is a valid `kid`, and comparison is on the decoded octets after the string has been checked to be canonical unpadded base64url.
+
+The verifier MUST perform the full assertion verification procedure of WebAuthn Level 3 Section 7.2, including: `type` is `"webauthn.get"`; `challenge` decodes to exactly D; `origin` is on the verifier's allowlist for this deployment; cross-origin and `topOrigin` values are rejected unless the verifier's policy names them; `rpIdHash` matches the expected RP ID; the UP and UV flags are both set; the credential ID equals the octets decoded from `approval_key.kid`; the signature verifies over `authenticatorData || SHA-256(clientDataJSON)` under the enrolled credential public key with an algorithm on the verifier's allowlist; and signature counter handling follows the verifier's policy.
 
 Evidence retention. The DS MUST retain, and export with the evidence, the original octets of `clientDataJSON`, `authenticatorData`, and `signature`, and the credential ID. A verifier MUST verify against the retained `clientDataJSON` octets. Nobody in the chain may reserialize `clientDataJSON`: the signature covers the hash of the exact octets the client produced, and a parsed-and-rewritten copy either fails verification or, worse, is checked against a hash recomputed from the rewrite.
 
@@ -134,7 +137,7 @@ The evidence is only as independent as the association between the Subject and t
 
 A DS-signed enrollment record alone is not an anchor: a DS that can enroll a key for a Subject can approve for that Subject.
 
-An enrollment record states: `subject` (`ns` and `id`), `kid`, the public key or credential public key, `epoch`, the profile (`webauthn` or `jws`), the anchor type, and the anchor's signature or reference.
+An enrollment record states: `subject` (`ns` and `id`), `kid` (for the WebAuthn profile, the credential ID as unpadded base64url, Section 4a), the public key or credential public key, `epoch`, the profile (`webauthn` or `jws`), the anchor type, and the anchor's signature or reference.
 
 Rotation. A new approval key starts a new epoch. The rotation either proves continuity (the outgoing key, or a recovery key, signs the new enrollment) or is marked as new trust establishment. Verifiers that rely on continuity treat a new-trust epoch as a fresh enrollment that they must anchor again before accepting evidence under it. Account recovery that bypasses every prior key is new trust establishment, and the record says so.
 
@@ -144,7 +147,27 @@ Export. The DS SHOULD deliver the evidence (G, the proof, and the enrollment rec
 
 ## 6. Chain binding and activation
 
-Binding. The DS binds D, `consent_id`, and `root_jti` into its signed root consent receipt, alongside the members Section 5.4 already requires. The receipt also carries the proof profile and a digest of the retained evidence, so a verifier holding the receipt chain knows which evidence to fetch and can tell whether what it fetched is what the DS bound. The evidence itself is stored and exported with the receipt, not embedded in any token.
+Binding. The DS binds D, `consent_id`, and `root_jti` into its signed root consent receipt, alongside the members Section 5.4 already requires. The receipt also carries the proof profile and the evidence digest ED defined below, so a verifier holding the receipt chain knows which evidence to fetch and can tell whether what it fetched is what the DS bound. The evidence itself is stored and exported with the receipt, not embedded in any token.
+
+Retained-evidence envelope. The evidence the DS retains, exports, and digests is one closed JSON object E. A member not listed here makes E invalid, every member is REQUIRED, and byte strings are encoded as unpadded base64url (RFC 4648 Section 5).
+
+| Member | Type | Meaning |
+|---|---|---|
+| `purpose` | string | MUST be `"cred.grant.evidence"`. |
+| `version` | integer | MUST be `1`. |
+| `profile` | string | `"webauthn"` or `"jws"`: the proof profile of Section 4. |
+| `grant` | object | G, exactly as validated under Section 3. |
+| `proof` | object | The proof members for `profile`, below. |
+| `enrollment` | object | `{"kid": <string>, "epoch": <integer>, "public_key": <string>}`. `kid` and `epoch` equal G's `approval_key`. `public_key` is the key the DS verified the proof against, taken from the enrollment record: for `webauthn`, the credential public key (COSE_Key octets) as unpadded base64url; for `jws`, the RFC 7638 JWK thumbprint (SHA-256, unpadded base64url) of the enrolled public key. |
+
+`proof` for `webauthn` is `{"credential_id", "client_data_json", "authenticator_data", "signature"}`, each the original octets as unpadded base64url. `userHandle` is not included. `proof` for `jws` is `{"protected", "payload", "signature"}`, the three segments of the JWS Compact Serialization exactly as produced; `payload` MUST decode to C for `grant`.
+
+```
+EC = UTF-8( JCS(E) )                                  ; RFC 8785
+ED = SHA-256( UTF-8("cred.grant.evidence.v1") || 0x00 || EC )
+```
+
+The root receipt carries ED as unpadded base64url. The label and zero octet separate ED from D and from any other digest over JCS output. Canonicalizing E does not reserialize `clientDataJSON` or the JWS: those octets sit inside base64url strings, which JCS leaves unchanged. A verifier validates E (closed membership, types, `grant` as G, `enrollment` matching G's `approval_key`) before canonicalizing it, recomputes ED, and rejects evidence whose ED differs from the receipt's.
 
 Activation is one atomic step. Before the ceremony, the DS holds a pending challenge recording `consent_id`, `root_jti`, D, and `approve_by`. When evidence arrives, the DS verifies it and then, in one transaction:
 
@@ -188,7 +211,7 @@ Each vector starts from a valid root grant (G, D, evidence, enrollment record, r
 | RA-07 | Reissuance resetting a cumulative budget: a reissued root token (new `jti`, same `consent_id`) presented after part of a `max_lifetime` total was consumed, against a DS that re-initialized the total | Exercise above the remaining allowance is refused; the conformance check fails a DS whose total restarted |
 | RA-08 | Reserialized `clientDataJSON`: the retained `clientDataJSON` parsed and re-emitted (member order or whitespace changed, same values) | Reject: signature does not verify over the presented octets |
 
-Further candidates, lower priority: `approve_by` passed before verification; G with a duplicate member name or an unknown member; non-canonical JWS payload (valid G, not JCS form); `redelegation.allowed: false` with `max_depth: 1`; a new-trust epoch presented to a verifier that requires continuity.
+Further candidates, lower priority: `approve_by` passed before verification; G with a duplicate member name or an unknown member; non-canonical JWS payload (valid G, not JCS form); `redelegation.allowed: false` with `max_depth: 1`; `max_depth: -1`; a WebAuthn `kid` in padded or standard base64; an evidence envelope with an extra member or an ED that does not match the receipt; an unconstrained root DT that omits `constraints`; a new-trust epoch presented to a verifier that requires continuity.
 
 ## 9. Standards positioning
 
@@ -213,6 +236,7 @@ The change touches the Asor format only by attaching evidence outside it. The `a
 
 ````yaml
 normative:
+  RFC4648:
   RFC8785:
   RFC7515:
   WEBAUTHN-L3:
@@ -273,7 +297,7 @@ The approval object G is a JSON object with the following members, all REQUIRED.
 : The `jti` the root Delegation Token will carry, allocated before approval.
 
 `approval_key`:
-: An object with members `kid`, the enrolled approval key identifier, and `epoch`, the integer enrollment epoch ({{approval-enrollment}}).
+: An object with members `kid`, the enrolled approval key identifier, and `epoch`, the integer enrollment epoch ({{approval-enrollment}}). Under the WebAuthn profile, `kid` is the credential ID octets encoded as unpadded base64url (Section 5 of {{RFC4648}}).
 
 `account`:
 : An object with members `provider` and `account`: the upstream provider identifier and the provider's stable, immutable identifier for the account whose credential the grant exercises.
@@ -285,10 +309,10 @@ The approval object G is a JSON object with the following members, all REQUIRED.
 : The complete capability array of the root Delegation Token.
 
 `constraints`:
-: The complete constraint ceiling array of the root Delegation Token ({{constraint-ceilings}}); `[]` when the grant has none.
+: The complete constraint ceiling array of the root Delegation Token ({{constraint-ceilings}}); `[]` when the grant has none. A root Delegation Token issued under this section, including one reissued under the same consent, MUST carry the `constraints` claim, and MUST carry it as an empty array when this member is `[]`, so that G and the token have the same representation. This requirement applies only to root tokens issued under this section; it does not apply to tokens under {{chain-verifiable-profile}}.
 
 `redelegation`:
-: An object with members `allowed`, a boolean, and `max_depth`, the integer number of hops permitted below the root. When `allowed` is false, `max_depth` MUST be 0.
+: An object with members `allowed`, a boolean, and `max_depth`, the integer number of hops permitted below the root. `max_depth` MUST be 0 or greater. When `allowed` is false, `max_depth` MUST be 0.
 
 `nbf`, `exp`:
 : The grant's validity interval. No Delegation Token issued under the grant may be valid outside it.
@@ -318,7 +342,7 @@ The approval client is the software that displays G to the Subject and invokes t
 A proof binds D to the approval key named in G. This document defines two profiles.
 
 WebAuthn:
-: The approval client obtains an assertion {{WEBAUTHN-L3}} with D as the challenge, `allowCredentials` limited to the enrolled credential, and user verification required. The verifier MUST perform the complete assertion verification procedure of {{WEBAUTHN-L3}}, MUST require both the user present and user verified flags, and MUST check that the challenge equals D, that the origin and RP ID are ones it accepts, and that the credential is the one enrolled for the Subject under `approval_key`. The DS MUST retain, and a verifier MUST verify against, the original octets of `clientDataJSON` and `authenticatorData`, the signature, and the credential ID. No party may reserialize `clientDataJSON`.
+: The approval client obtains an assertion {{WEBAUTHN-L3}} with D as the challenge, `allowCredentials` limited to the enrolled credential, and user verification required. The approval client and the verifier obtain the credential ID by decoding `approval_key.kid` as unpadded base64url; enrollment records it in the same encoding, and the decoded octets are the value of `allowCredentials[].id` and the value compared with the asserted credential ID. The verifier MUST perform the complete assertion verification procedure of {{WEBAUTHN-L3}}, MUST require both the user present and user verified flags, and MUST check that the challenge equals D, that the origin and RP ID are ones it accepts, and that the credential is the one enrolled for the Subject under `approval_key`. The DS MUST retain, and a verifier MUST verify against, the original octets of `clientDataJSON` and `authenticatorData`, the signature, and the credential ID. No party may reserialize `clientDataJSON`.
 
 JWS:
 : The approval client produces a JWS {{RFC7515}} whose payload is the octets C, with a protected header containing `typ` with the value `cred-grant-approval+json`, `alg`, and `kid` equal to `approval_key.kid`. The verifier MUST accept only an `alg` on its local allowlist, MUST obtain the key from the enrollment record and never from the JWS, MUST reject a protected header containing `jwk`, `jku`, `x5u`, or `x5c`, and MUST reject the JWS if its payload, validated as G and canonicalized again, is not octet-identical to the payload.
@@ -337,7 +361,34 @@ The DS SHOULD deliver G, the proof, and a reference to the enrollment record to 
 
 ## Chain Binding and Activation {#approval-activation}
 
-When a grant carries approval evidence, the DS MUST include D, `consent_id`, `root_jti`, the proof profile, and a digest of the retained evidence in the signed receipt for the root of the chain ({{chain-integrity}}).
+When a grant carries approval evidence, the DS MUST include D, `consent_id`, `root_jti`, the proof profile, and the evidence digest ED in the signed receipt for the root of the chain ({{chain-integrity}}).
+
+The retained evidence is a JSON object E with exactly these members, all REQUIRED; byte strings are unpadded base64url (Section 5 of {{RFC4648}}):
+
+`purpose`:
+: The string `cred.grant.evidence`.
+
+`version`:
+: The integer `1`.
+
+`profile`:
+: `webauthn` or `jws`.
+
+`grant`:
+: G, as validated under {{approval-commitment}}.
+
+`proof`:
+: For `webauthn`, an object with members `credential_id`, `client_data_json`, `authenticator_data`, and `signature`, each the original octets. For `jws`, an object with members `protected`, `payload`, and `signature`, the segments of the JWS Compact Serialization as produced; `payload` MUST decode to C.
+
+`enrollment`:
+: An object with members `kid` and `epoch`, equal to G's `approval_key`, and `public_key`: for `webauthn`, the enrolled credential public key (COSE_Key octets); for `jws`, the JWK thumbprint {{RFC7638}} of the enrolled public key.
+
+~~~
+ED = SHA-256( UTF-8("cred.grant.evidence.v1") || 0x00 ||
+              UTF-8(JCS(E)) )
+~~~
+
+JCS is {{RFC8785}}. The receipt carries ED as unpadded base64url. A verifier MUST validate E before canonicalizing it and MUST reject evidence whose recomputed ED differs from the receipt's.
 
 Activation MUST be atomic: in one transaction, the DS consumes the pending approval for `consent_id` and `root_jti`, writes the root receipt, initializes cumulative accounting for the consent, and issues the root Delegation Token with `jti` equal to `root_jti`. A second activation for the same `consent_id` or `root_jti` MUST fail. Evidence verified after `approve_by` MUST be rejected.
 
@@ -381,5 +432,5 @@ A DS that resets a cumulative total when it reissues a root token, or that lets 
 ### A.5 Changes from -02 entry
 
 ````markdown
-- New {{root-approval}}: optional evidence that an independently enrolled, user-controlled key endorsed the exact root grant, by a WebAuthn assertion or JWS over the digest of a closed approval object, bound into the root receipt; no new grant type and no change to the {{ASOR}} format. New {{custody}} in the Architecture Overview and {{sec-root-approval}} in Security Considerations. Re-consent now also follows a change of Agent key. References: {{RFC8785}}, {{RFC7515}}, and {{WEBAUTHN-L3}} normative; {{RFC9334}} and {{PSEA}} informative.
+- New {{root-approval}}: optional evidence that an independently enrolled, user-controlled key endorsed the exact root grant, by a WebAuthn assertion or JWS over the digest of a closed approval object, bound into the root receipt; no new grant type and no change to the {{ASOR}} format. New {{custody}} in the Architecture Overview and {{sec-root-approval}} in Security Considerations. Re-consent now also follows a change of Agent key. References: {{RFC4648}}, {{RFC8785}}, {{RFC7515}}, and {{WEBAUTHN-L3}} normative; {{RFC9334}} and {{PSEA}} informative.
 ````
