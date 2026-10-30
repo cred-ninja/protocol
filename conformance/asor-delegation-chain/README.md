@@ -12,7 +12,7 @@ Each file holds one root-first chain of HS256 Delegation Tokens signed with a pu
 
 ## Running
 
-Needs Node 20 (the version sdk CI uses) and `tsx`.
+Needs Node 22 or later (the sdk's engines floor; CI here and in the sdk uses Node 26) and `tsx`.
 
 From a clean machine, clone both repos as siblings and install the sdk workspace first. The sdk install matters: the vault entry point pulls in packages with native dependencies (better-sqlite3), so the runner fails on module resolution without it.
 
