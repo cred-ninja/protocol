@@ -1,0 +1,5 @@
+Native score of the ASOR -03 vector set (36 files, attenu-guard v0.22.0 commit 3f8249ea3cf0e5b8e759495b12b15d1f7f8a43bc, tests/vectors-02/) through verifyAgentDelegationChain() in cred-ninja/sdk packages/attenuation, sdk commit c5382f0e776f50668575b5937226c1c0be4124d0, Node v20.20.2, run 2026-10-29.
+The 35 files shared with -02 are also scored, with hop and cause pinned, by the sdk's own test packages/attenuation/src/__tests__/asor-02-vectors.test.ts (vitest: 36 tests passed = 35 vectors + a count check). The 36th file was scored by a scratch harness that repeats that test's call and compares the outcome name; its hop and message are printed below. Library-level result over fixture tokens, not an HTTP or wire test.
+
+PASS reject_child_adds_detail_type.json expected malformed got malformed hop 2: token[2] authorization_details must carry exactly one detail, of type 'agent_delegation'; found 2
+36 files: 36 outcome-name match, 0 mismatch

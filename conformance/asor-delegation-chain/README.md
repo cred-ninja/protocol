@@ -12,7 +12,7 @@ Each file holds one root-first chain of HS256 Delegation Tokens signed with a pu
 
 ## Running
 
-Needs Node 20 (the version sdk CI uses) and `tsx`.
+Needs Node 22 or later (the sdk's engines floor; CI here and in the sdk uses Node 26) and `tsx`.
 
 From a clean machine, clone both repos as siblings and install the sdk workspace first. The sdk install matters: the vault entry point pulls in packages with native dependencies (better-sqlite3), so the runner fails on module resolution without it.
 
@@ -66,6 +66,15 @@ Scores are only citable with the SDK commit they were taken at. Retained machine
 | 2026-10-18 | `d4062a9a687dca46f04d2e9f66c6b3c0ce4983fe` (main) | **-02 set (`vectors-02/`):** 5 of 35 PASS, 17 FAIL, 0 GAP, 13 MASKED. -01 set unchanged at 20 of 20 at this commit (not retained separately) | `results/2026-10-18-sdk-d4062a9-vectors-02.json` (Node 22.22.0) |
 | 2026-10-18 | `5b13213bf84470670569dd2d72c4dba6fe8b7911` (branch `feat/asor-02-constraints`, cred-ninja/sdk#56, not main) | **-02 set:** 20 of 35 PASS, 5 FAIL, 10 GAP, 0 MASKED. -01 set 20 of 20 at this commit (not retained separately) | `results/2026-10-18-sdk-5b13213-vectors-02.json` (Node 22.22.0) |
 | 2026-10-20 | `87eabb7230813b27eb1a50920766bee3550bdc04` (main, cred-ninja/sdk#56 merged; cited in draft -02 Implementation Status) | **-02 set:** 20 of 35 PASS, 5 FAIL, 10 GAP, 0 MASKED, row for row identical to `5b13213`. -01 set 20 of 20 | `results/2026-10-20-sdk-87eabb7-vectors-02.json`, `results/2026-10-20-sdk-87eabb7.json` (Node 22.22.0) |
+| 2026-10-29 | `c5382f0e776f50668575b5937226c1c0be4124d0` (main, cred-ninja/sdk#78 merged) | **-01 set:** 20 of 20. **-02 set:** 21 of 35 PASS, 4 FAIL, 10 GAP, 0 MASKED; the only change from `87eabb7` is `valid_unknown_constraint_identical`, FAIL to PASS. **-03 set (`vectors-03/`):** 21 of 36 PASS, 4 FAIL, 11 GAP, 0 MASKED; the added `reject_child_adds_detail_type` is a GAP. No vector skipped or unrun | `results/2026-10-29-sdk-c5382f0.json`, `results/2026-10-29-sdk-c5382f0-vectors-02.json`, `results/2026-10-29-sdk-c5382f0-vectors-03.json` (Node 20.20.2; at this commit the sdk's server `better-sqlite3` 11.x does not build under Node 26) |
+| 2026-10-30 | `dad77074bb69f429db1325ece801cc69a0c26010` (main: Node 26, DPoP-bound handles, request-bound proofs; cred-ninja/sdk#82, #83, #84) | **-01 set:** 20 of 20. **-02 set:** 21 of 35 PASS, 4 FAIL, 10 GAP, 0 MASKED. **-03 set:** 21 of 36 PASS, 4 FAIL, 11 GAP, 0 MASKED. Row for row identical to `c5382f0`; the DPoP work does not touch chain verification | `results/2026-10-30-sdk-dad7707.json`, `results/2026-10-30-sdk-dad7707-vectors-02.json`, `results/2026-10-30-sdk-dad7707-vectors-03.json` (Node 26.13.0) |
+| 2026-10-30 | `4c61b886e7de32051a2a02bc0b91f8af3f56ddab` (main: JWT Delegation Tokens replace brokered handles; cred-ninja/sdk#88) | **-01 set:** 20 of 20. **-02 set:** 21 of 35 PASS, 4 FAIL, 10 GAP, 0 MASKED. **-03 set:** 21 of 36 PASS, 4 FAIL, 11 GAP, 0 MASKED. Row for row identical to `dad7707`. Native scoring of the 36 files through `verifyAgentDelegationChain()`: 36 of 36 outcome names match | `results/2026-10-30-sdk-4c61b88.json`, `results/2026-10-30-sdk-4c61b88-vectors-02.json`, `results/2026-10-30-sdk-4c61b88-vectors-03.json`, `results/2026-10-30-sdk-4c61b88-native-vectors-03.txt` (Node 26.8.1) |
+
+The sdk's `main` history was rewritten after 2026-10-20. Every pinned commit above is still retrievable from GitHub by its hash, but none of them is an ancestor of `main` today (the GitHub compare API reports them as diverged from `main` at merge base `586fad0`). Cite a pin by its full hash.
+
+These runs score the sdk's hop-model code (`verifyDelegationChain()` and `validateSubDelegation()`) through the claim mapping below. They are not the same measurement as the sdk's own `packages/attenuation/src/__tests__/asor-02-vectors.test.ts`, added in sdk `f6489a8` (2026-10-21), which reads the -02 tokens natively through `verifyAgentDelegationChain()` with no mapping and is the source of the "35 of 35" in the sdk's CHANGELOG and `docs/protocol-conformance.md`. At `c5382f0` that test passes (35 vectors plus a count check), and the 36th -03 vector, scored by a scratch harness that repeats the test's call, is rejected as `malformed` at hop 2 for carrying a second detail: `results/2026-10-29-sdk-c5382f0-native-vectors-03.txt`. Both are library-level results over fixed vectors, not HTTP or wire tests.
+
+The same three runs against `c5382f0` under Node 24.22.2 (lockfile unchanged) and Node 26.13.0 (with `packages/server`'s `better-sqlite3` raised to `^12.11.1` in a scratch checkout) give identical counts. Node 20 reached end of life on 2026-04-30.
 
 The `ff00421` SDK carried constraint ceilings in receipts and enforced asor-01 section 4.3 subsumption, but its `parseConstraints` accepted only numeric `max` and numeric `rank`, while the vectors use `{"key": "egress", "rank": "any"}`, an ordered-enumeration rank label per section 4.2. Passing `constraints` through would have failed every valid chain, so the runner withheld it and `reject_exceeded_ceiling` stayed GAP. sdk `e92af19` (cred-ninja/sdk PR #41) covers all six section 4.2 types and resolves rank labels through a per-key ordering seeded with the draft's `egress` none < internal < any; the runner now maps `constraints` onto `DelegationChainHop.constraints` and hands the parsed lists to `validateSubDelegation` the way the subdelegate route does. Against an SDK older than `e92af19` the constrained vectors now fail closed as `malformed` at hop 0; that is the correct reading of section 4.2 for an implementation that does not know the `rank` label form.
 
@@ -215,3 +224,31 @@ Against cred-ninja/sdk `d4062a9a687dca46f04d2e9f66c6b3c0ce4983fe` (main, 2026-10
 | reject_wildcard_over_opaque.json | not_narrower | reject:not_narrower | PASS |
 
 Every FAIL and MASKED row except two traces to hop 0: sdk main's `parseConstraints` rejects `order` on `rank` (closed to `key` plus one type member), does not know `max_lifetime` or `max_subtree`, and treats two constraints on one key as a duplicate even when their types differ. That one parser gap fails every valid chain that carries constraints and masks every rule behind it. The two exceptions measure a real scope difference: `reject_mixed_case_wildcard` (`User.*`) and `reject_newline_scope` (`crm.read` plus a line feed) are rejected as `not_narrower` through the legacy exact-match allowance, where -02 Section 4.1 requires `malformed`.
+
+## -03 vector set (`vectors-03/`, 36 vectors)
+
+The 36 files in `vectors-03/` are copied verbatim from [attenu-io/attenu-guard](https://github.com/attenu-io/attenu-guard) at tag `v0.22.0` (commit `3f8249ea3cf0e5b8e759495b12b15d1f7f8a43bc`), path `tests/vectors-02/` (upstream keeps the -02 directory name), the set that [draft-asor-wimse-agent-delegation-chain-03](https://www.ietf.org/archive/id/draft-asor-wimse-agent-delegation-chain-03.txt) Section 11 and Appendix B describe; the draft names the library versions (attenu-guard 0.22.0, attenu-guard-ts 0.16.0) but not a tag or path. The same 36 files are byte-identical in [attenu-io/attenu-guard-ts](https://github.com/attenu-io/attenu-guard-ts) at tag `v0.16.0` (commit `35ee352df31a1f8578e4f7bca865ce100238e0e7`), path `test/fixtures/vectors/draft02/`. Thirty-five are byte-identical to `vectors-02/`; the added file is `reject_child_adds_detail_type.json` (a leaf that adds a second detail of a type its parent did not carry; declared `malformed`). The -01 twenty at that tag are byte-identical to `vectors/`. Every file still carries `"draft": "02"`, so the runner applies the -02 mapping.
+
+Run: `npx tsx run.ts --sdk ../../../sdk --vectors vectors-03`.
+
+-03 changes step 5 of Section 6 from `now <= exp` to `now < exp`. No vector sits on that boundary, so the set does not measure it.
+
+Against cred-ninja/sdk `c5382f0` (main, 2026-10-29), Node 20.20.2: 21 of 36 PASS, 4 FAIL, 11 GAP, 0 MASKED. The 35 shared rows are identical to the -02 run at the same commit. Non-pass rows:
+
+| Vector | Expected | Cred | Result | Why |
+|---|---|---|---|---|
+| valid_audience_array.json | accept | accept | GAP | `aud` is not mapped (step 8) |
+| reject_aud_empty_array.json | malformed | accept | GAP | `aud` shape is not mapped (Section 3) |
+| reject_aud_null.json | malformed | accept | GAP | `aud` shape is not mapped (Section 3) |
+| reject_audience_mismatch.json | audience_mismatch | accept | GAP | leaf audience is not mapped (step 8) |
+| reject_cnf_without_confirmation.json | malformed | accept | GAP | `cnf` shape is not mapped (Section 3) |
+| reject_missing_cnf.json | malformed | accept | GAP | `cnf` is not mapped (Section 3) |
+| reject_detail_extra_member.json | malformed | accept | GAP | closed detail is not mapped (Section 4) |
+| reject_second_detail.json | malformed | accept | GAP | only the first detail is mapped (Section 4) |
+| reject_unknown_detail_type.json | malformed | accept | GAP | detail `type` is not mapped (Section 4.4) |
+| reject_child_adds_detail_type.json | malformed | accept | GAP | only the first detail is mapped (Section 4.4); no `CAUSE_02` entry, so the runner's note is generic |
+| reject_child_raises_del_max_depth.json | not_narrower | accept | GAP | `del_max_depth` below DT_0 is not mapped (Section 4.3 rule 5) |
+| reject_mixed_case_wildcard.json | malformed | reject:not_narrower | FAIL | `User.*` rejected through subsumption, not as a malformed scope |
+| reject_newline_scope.json | malformed | reject:not_narrower | FAIL | `crm.read` plus a line feed rejected through subsumption |
+| reject_rank_without_order.json | malformed | reject:not_narrower | FAIL | label `rank` without `order` resolved through `DEFAULT_RANK_ORDERINGS`, then rejected as an order mismatch |
+| reject_root_without_principal.json | malformed | reject:user_mismatch | FAIL | empty root `sub` caught at hop 1 as a principal mismatch, not at parse |
