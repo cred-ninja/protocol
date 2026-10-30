@@ -19,7 +19,11 @@ From a clean machine, clone both repos as siblings and install the sdk workspace
 ```
 git clone https://github.com/cred-ninja/protocol.git
 git clone https://github.com/cred-ninja/sdk.git
-cd sdk && npm ci && cd ..
+cd sdk && npm ci
+npm run build --workspace=packages/protocol
+npm run build --workspace=packages/attenuation
+npm run build --workspace=packages/oauth
+cd ..
 cd protocol/conformance/asor-delegation-chain
 npm install
 npx tsx run.ts --sdk ../../../sdk
@@ -27,7 +31,7 @@ npx tsx run.ts --sdk ../../../sdk
 
 Pass `--sdk` explicitly. Without it the runner falls back to `CRED_SDK_PATH`, a sibling checkout, then an installed `@credninja/vault` from npm, and the npm package lags the source tree this runner is meant to test.
 
-Cred code is resolved from, in order: `--sdk PATH`, `$CRED_SDK_PATH`, a sibling checkout at `../../../sdk`, then an installed `@credninja/vault`. The first two point at a source checkout and use `packages/vault/src` directly, so no build step is needed.
+Cred code is resolved from, in order: `--sdk PATH`, `$CRED_SDK_PATH`, a sibling checkout at `../../../sdk`, then an installed `@credninja/vault`. The first two point at a source checkout and use `packages/vault/src` directly, so vault itself needs no build, but the workspace packages it imports (`@credninja/protocol`, `@credninja/attenuation`, `@credninja/oauth`) resolve through their built `dist/`, hence the three builds above.
 
 Flags: `--vectors DIR` to point at another vector directory, `--allow-gaps` to exit zero when only GAP rows are present, `--json` for machine output.
 

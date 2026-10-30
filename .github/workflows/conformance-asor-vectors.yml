@@ -40,11 +40,15 @@ jobs:
       - name: Install sdk dependencies
         working-directory: sdk
         run: npm ci
-      # The vault entry the runner imports resolves @credninja/protocol
-      # through its built dist/; npm ci alone leaves it unbuilt.
-      - name: Build sdk protocol package
+      # The vault entry the runner imports resolves its workspace deps
+      # (@credninja/protocol, @credninja/attenuation, @credninja/oauth)
+      # through their built dist/; npm ci alone leaves them unbuilt.
+      - name: Build sdk packages the vault imports
         working-directory: sdk
-        run: npm run build --workspace=packages/protocol
+        run: |
+          npm run build --workspace=packages/protocol
+          npm run build --workspace=packages/attenuation
+          npm run build --workspace=packages/oauth
       - name: Install runner deps
         working-directory: protocol/conformance/asor-delegation-chain
         run: npm install --no-audit --no-fund
