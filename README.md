@@ -2,7 +2,7 @@
 
 **An open credential delegation protocol for AI agents.**
 
-> **Status:** Pre-submission draft · Targeting IETF WIMSE WG / OAuth WG · Next milestone: datatracker submission ahead of IETF 127 (San Francisco, November 2026)
+> **Status:** Individual Internet-Draft ([draft-sweeney-wimse-credential-delegation](https://datatracker.ietf.org/doc/draft-sweeney-wimse-credential-delegation/)), not an adopted standard · Aimed at the IETF WIMSE and OAuth working groups
 
 ---
 
