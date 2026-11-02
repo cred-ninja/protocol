@@ -27,7 +27,7 @@ Pass of 2026-10-20 (after Kieran's list replies of 2026-10-20 13:02 UTC):
 - Changes from -01 and Acknowledgments updated (Caleb Dayton, Deonte O'dell Watts).
 - These close every item under "Fix in Kieran's own -02" in sdk/reports/thread-positions.md.
 
-CHECK BEFORE UPLOAD: Caleb's 2026-10-20 15:10 UTC mail is signed "Caleb Dyer" while his address and the register say Dayton. Confirm the surname for the Acknowledgments and Changes entries.
+CHECK BEFORE UPLOAD: confirm the spelling of Caleb's surname (Dayton or Dyer) for the Acknowledgments and Changes entries.
 
 Build: references fetched from bib.ietf.org are blocked in the cloud container, so the build used a .refcache seeded from the RFC references already in the committed -02 .xml (KRAMDOWN_OFFLINE=1). Before editing, that setup reproduced the committed -02 .txt byte for byte. Rendered text: no line over 72 columns, ASCII only. idnits not run. `date:` still reads 2026-10-15; set it at upload.
 
