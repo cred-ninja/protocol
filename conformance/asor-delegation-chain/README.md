@@ -1,4 +1,24 @@
-# Conformance: draft-asor-wimse-agent-delegation-chain Appendix B vectors (-01: v0.9.0, 20 vectors; -02: v0.20.0, 35 vectors)
+# Conformance: draft-asor-wimse-agent-delegation-chain Appendix B vectors
+
+## Current native result and the older adapter
+
+At SDK main `42b39f4930f9806f385ae3868ca99bb43d119780` (integration PR #96), the native `verifyAgentDelegationChain()` verifier passes **35/35 ASOR -02 vectors and 36/36 ASOR -03 vectors**. Each rejection matches its declared outcome, hop and isolated rule. The extra -03 vector rejects a second detail at hop 2. Retained JSON includes the SDK commit, Node version, runner hash and individual vector hashes:
+
+- `results/2026-10-30-sdk-42b39f4-native-vectors-02.json`
+- `results/2026-10-30-sdk-42b39f4-native-vectors-03.json`
+
+Repeat these measurements from this directory (Node 22+, `npm ci` here and in the SDK):
+
+```sh
+npx tsx run-native.ts --sdk /path/to/sdk --vectors vectors-02 --count 35
+npx tsx run-native.ts --sdk /path/to/sdk --vectors vectors-03 --count 36
+```
+
+The SDK checkout must have clean tracked files. `run-native.ts` uses the same rejection-hop/cause expectations as the SDK's `asor-02-vectors.test.ts`, plus the -03 detail-cardinality vector. A wrong inventory count or a mismatch fails the run. It does not map claims or rejection names.
+
+The older `run.ts` is a separate measurement of the receipt hop model through a claim-mapping adapter. At the same commit it reports -01: 20 PASS; -02: 21 PASS, 4 FAIL, 10 GAP; -03: 21 PASS, 4 FAIL, 11 GAP, all with 0 MASKED. Its nonzero exits for -02/-03 are expected unresolved adapter results, not failures of the native ASOR verifier. The corresponding `results/2026-10-30-sdk-42b39f4*.json` retain every row. Both measurements are library fixtures, not HTTP interoperability or holder-binding/status tests.
+
+The remaining sections describe the older adapter and its history.
 
 Runs the interop vectors published with [draft-asor-wimse-agent-delegation-chain-00](https://datatracker.ietf.org/doc/draft-asor-wimse-agent-delegation-chain/) through Cred's shipping delegation chain logic and prints a pass/fail/gap matrix.
 
@@ -49,7 +69,7 @@ Reason mapping from Cred to the draft: `exp_not_monotonic` to `expired`, `parent
 - PASS: Cred's outcome and reason match the vector's declaration.
 - FAIL: Cred accepted a chain the vector rejects, rejected one it accepts, or rejected for a different reason. A FAIL is a bug.
 - MASKED (-02 set only): Cred's outcome name matches the vector's declaration, but Cred rejected at a different hop or for a different property than the one the vector isolates, so the rule under test was never reached. Not a pass. The runner exits nonzero on any MASKED row.
-- GAP: Cred accepted a chain the vector rejects because the property being tested is not represented in Cred's model. No vector currently GAPs against sdk `b1bfec0` or later. `reject_exceeded_ceiling` was a GAP through sdk `ff00421`, and `reject_unsafe_integer` and `reject_duplicate_member` through `e92af19`; see the pinned runs below.
+- GAP: Cred accepted a chain the vector rejects because the property being tested is not represented in Cred's model. In the -01 set, no vector GAPs against sdk `b1bfec0` or later; the -02/-03 adapter gaps are reported above. `reject_exceeded_ceiling` was a GAP through sdk `ff00421`, and `reject_unsafe_integer` and `reject_duplicate_member` through `e92af19`; see the pinned runs below.
 
 ## Pinned runs
 
@@ -70,7 +90,7 @@ Scores are only citable with the SDK commit they were taken at. Retained machine
 | 2026-10-30 | `dad77074bb69f429db1325ece801cc69a0c26010` (main: Node 26, DPoP-bound handles, request-bound proofs; cred-ninja/sdk#82, #83, #84) | **-01 set:** 20 of 20. **-02 set:** 21 of 35 PASS, 4 FAIL, 10 GAP, 0 MASKED. **-03 set:** 21 of 36 PASS, 4 FAIL, 11 GAP, 0 MASKED. Row for row identical to `c5382f0`; the DPoP work does not touch chain verification | `results/2026-10-30-sdk-dad7707.json`, `results/2026-10-30-sdk-dad7707-vectors-02.json`, `results/2026-10-30-sdk-dad7707-vectors-03.json` (Node 26.13.0) |
 | 2026-10-30 | `4c61b886e7de32051a2a02bc0b91f8af3f56ddab` (main: JWT Delegation Tokens replace brokered handles; cred-ninja/sdk#88) | **-01 set:** 20 of 20. **-02 set:** 21 of 35 PASS, 4 FAIL, 10 GAP, 0 MASKED. **-03 set:** 21 of 36 PASS, 4 FAIL, 11 GAP, 0 MASKED. Row for row identical to `dad7707`. Native scoring of the 36 files through `verifyAgentDelegationChain()`: 36 of 36 outcome names match | `results/2026-10-30-sdk-4c61b88.json`, `results/2026-10-30-sdk-4c61b88-vectors-02.json`, `results/2026-10-30-sdk-4c61b88-vectors-03.json`, `results/2026-10-30-sdk-4c61b88-native-vectors-03.txt` (Node 26.8.1) |
 
-The sdk's `main` history was rewritten after 2026-10-20. Every pinned commit above is still retrievable from GitHub by its hash, but none of them is an ancestor of `main` today (the GitHub compare API reports them as diverged from `main` at merge base `586fad0`). Cite a pin by its full hash.
+The SDK's `main` history was rewritten after 2026-10-20, so an older pin need not be an ancestor of current main. Cite a pin by its full hash rather than inferring its contents from branch ancestry. Recent runs are independently pinned above.
 
 These runs score the sdk's hop-model code (`verifyDelegationChain()` and `validateSubDelegation()`) through the claim mapping below. They are not the same measurement as the sdk's own `packages/attenuation/src/__tests__/asor-02-vectors.test.ts`, added in sdk `f6489a8` (2026-10-21), which reads the -02 tokens natively through `verifyAgentDelegationChain()` with no mapping and is the source of the "35 of 35" in the sdk's CHANGELOG and `docs/protocol-conformance.md`. At `c5382f0` that test passes (35 vectors plus a count check), and the 36th -03 vector, scored by a scratch harness that repeats the test's call, is rejected as `malformed` at hop 2 for carrying a second detail: `results/2026-10-29-sdk-c5382f0-native-vectors-03.txt`. Both are library-level results over fixed vectors, not HTTP or wire tests.
 
@@ -82,7 +102,7 @@ sdk `b1bfec0` (cred-ninja/sdk PR #45, merged to main as `a41366e`) adds `parseSt
 
 Spec input for asor -02: `rank` labels carry no ordering on the wire. The draft names one example ordering and the vectors depend on it. Either the constraint-types registry entry for a key carries its ordering, or the token does; the SDK fails closed on any label without a registered ordering.
 
-## Current matrix
+## Historical -01 matrix
 
 Against cred-ninja/sdk `a41366e` (main, 2026-10-07; identical rows at `b1bfec0`). `e92af19` differs only in the two JSON rows below (GAP there); `4a24376` and `ff00421` also GAP on `reject_exceeded_ceiling`:
 
