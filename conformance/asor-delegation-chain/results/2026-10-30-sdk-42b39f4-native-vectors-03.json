@@ -1,0 +1,390 @@
+{
+  "measurement": "native ASOR verifier: outcome, hop and cause",
+  "sdkCommit": "42b39f4930f9806f385ae3868ca99bb43d119780",
+  "node": "v26.8.1",
+  "vectorSet": "vectors-03",
+  "runnerSha256": "885fefdaee65367615f3e7f0415493ff56355cf04c08b1f9e366727ba2eb8bbe",
+  "runAt": "2026-10-31T00:19:46.978Z",
+  "limitations": "Fixed library fixtures only; no holder binding, status, HTTP or live-provider coverage.",
+  "total": 36,
+  "passed": 36,
+  "failed": 0,
+  "rows": [
+    {
+      "file": "reject_alg_not_accepted.json",
+      "sha256": "d4a4672fc69957e53f577f67ae04937983f47c86e69ed35b5ac2902a9ae5ff2a",
+      "expected": "signature_invalid",
+      "actual": "signature_invalid",
+      "pass": true,
+      "hop": 0,
+      "message": "token[0] signature: alg \"HS256\" is not on the accepted list",
+      "expectedHop": 0,
+      "expectedCause": "signature"
+    },
+    {
+      "file": "reject_altered_sub_and_par_hash.json",
+      "sha256": "fa9de0aee0088bad22eab217e9cbe14aeba827f999b7458ca196c5f24fd69eb4",
+      "expected": "par_hash_mismatch",
+      "actual": "par_hash_mismatch",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] par_hash does not commit to the parent token presented",
+      "expectedHop": 2,
+      "expectedCause": "parent"
+    },
+    {
+      "file": "reject_aud_empty_array.json",
+      "sha256": "1732bcbaf03275fe8a4080cd618b2a91e5d92782ff10488e335569bfb0b16055",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] aud must be a string or a non-empty array of strings",
+      "expectedHop": 2,
+      "expectedCause": "\\baud\\b"
+    },
+    {
+      "file": "reject_aud_null.json",
+      "sha256": "a29b5fe9caeabf3aeaf2c6298d059b334f4279220c69cb00156ea79032750475",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] aud must be a string or a non-empty array of strings",
+      "expectedHop": 2,
+      "expectedCause": "\\baud\\b"
+    },
+    {
+      "file": "reject_audience_mismatch.json",
+      "sha256": "49516da1a79c7a6699650217d4d2d8c8e940b5b2779a4c49433303abb2f17497",
+      "expected": "audience_mismatch",
+      "actual": "audience_mismatch",
+      "pass": true,
+      "hop": 2,
+      "message": "DT_n aud does not name this verifier (https://files.example.com)",
+      "expectedHop": 2,
+      "expectedCause": "\\baud\\b|audience"
+    },
+    {
+      "file": "reject_child_adds_detail_type.json",
+      "sha256": "9a14bf4b54b51f1fb476ebb70b43a9684353c7c2107e0fa8915ab537887e031e",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] authorization_details must carry exactly one detail, of type 'agent_delegation'; found 2",
+      "expectedHop": 2,
+      "expectedCause": "detail"
+    },
+    {
+      "file": "reject_child_exp_exceeds_parent.json",
+      "sha256": "72502a8e19eb7a69b6b3783310db9db6413a9f02da32b2e1e7f265840bec9bb6",
+      "expected": "expired",
+      "actual": "expired",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] expires at 910, after its parent at 900",
+      "expectedHop": 2,
+      "expectedCause": "expires"
+    },
+    {
+      "file": "reject_child_raises_del_max_depth.json",
+      "sha256": "55d54535826c7836496daab466b717827e9191a6ff0b9e32defacc53d6f53f30",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] del_max_depth 60 exceeds its parent's max depth 7",
+      "expectedHop": 2,
+      "expectedCause": "del_max_depth|max depth"
+    },
+    {
+      "file": "reject_cnf_without_confirmation.json",
+      "sha256": "327164d54c850ef7861c5f346f5d17b2279fb75268097b5a3e30c5e982cb983b",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] cnf must be an object carrying one of jkt, jwk, x5t#S256",
+      "expectedHop": 2,
+      "expectedCause": "\\bcnf\\b"
+    },
+    {
+      "file": "reject_constraint_extra_member.json",
+      "sha256": "a34fbb7596616810e4444bbea50bd13e6691c4593a10d23905d43be4fbafdb97",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraints[2] ('max_rows') max carries undefined member 'note'",
+      "expectedHop": 2,
+      "expectedCause": "max_rows"
+    },
+    {
+      "file": "reject_cross_type_lifetime_for_max.json",
+      "sha256": "8ced2f1592027050287511b024f35befa1ef1a75cffc55e0bf70b74754302538",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraint 'max_rows': Child restates 'max_rows' as max_lifetime but not as max; no inference is made across types",
+      "expectedHop": 2,
+      "expectedCause": "max_rows"
+    },
+    {
+      "file": "reject_detail_extra_member.json",
+      "sha256": "ffb6958e0e906e76d5eb74e05b0cc4bab6f0f0fc3ca1e9b3cc5f17c2a5fa0626",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] the agent_delegation detail carries members this verifier cannot evaluate: actions",
+      "expectedHop": 2,
+      "expectedCause": "detail|actions"
+    },
+    {
+      "file": "reject_duplicate_key_type.json",
+      "sha256": "6969cafea108f1bd6352fda2eb37e9d6ed537b6bf5fd4fd3128c6178ee42ef7b",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraints has duplicate (key, type) ('max_rows', max)",
+      "expectedHop": 2,
+      "expectedCause": "max_rows"
+    },
+    {
+      "file": "reject_max_lifetime_widened.json",
+      "sha256": "0c9bb9db34e68feb19a364858bfb32fcc50917df81c20478919d2157d6066e07",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraint 'max_calls': Child loosens 'max_calls': max_lifetime 10 to 1000",
+      "expectedHop": 2,
+      "expectedCause": "max_calls"
+    },
+    {
+      "file": "reject_max_subtree_widened.json",
+      "sha256": "75f365c1dc7d82a5660d4f089ddc9f2092161d5ff336b39ab7285a6ce9057ce4",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraint 'max_spend': Child loosens 'max_spend': max_subtree 400 to 5000",
+      "expectedHop": 2,
+      "expectedCause": "max_spend"
+    },
+    {
+      "file": "reject_missing_client_id.json",
+      "sha256": "7c7e8fc2d66c1bf91551619cdd5da7e875ac48ba1280521ef486cce9872c6d80",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] missing required fields: client_id must name the Acting Agent",
+      "expectedHop": 2,
+      "expectedCause": "client_id"
+    },
+    {
+      "file": "reject_missing_cnf.json",
+      "sha256": "4d180156187e717d033a677d44fa423583aedae41cebeb3175d6fd9dc64d5499",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] cnf must be an object carrying one of jkt, jwk, x5t#S256",
+      "expectedHop": 1,
+      "expectedCause": "\\bcnf\\b"
+    },
+    {
+      "file": "reject_mixed_case_wildcard.json",
+      "sha256": "770a8a28200dc239ca2a6d8e945ba3d300469a800845fa85eb54a48414bf9be8",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] invalid scope \"User.*\": not a literal, wildcard or opaque scope",
+      "expectedHop": 1,
+      "expectedCause": "User\\.\\*"
+    },
+    {
+      "file": "reject_newline_scope.json",
+      "sha256": "0dd591ba06bbab61f082965dec0f47c00cbc05c8ac58509b99165aeb8d97e7ad",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] invalid scope \"crm.read\\n\": not a literal, wildcard or opaque scope",
+      "expectedHop": 1,
+      "expectedCause": "crm\\.read"
+    },
+    {
+      "file": "reject_opaque_case_folded.json",
+      "sha256": "0bc425778c0656b76e813d4115fad095f7b02cd3416b9d593ac32cf49dcd1022",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] holds scopes its parent does not cover: user.read",
+      "expectedHop": 1,
+      "expectedCause": "user\\.read"
+    },
+    {
+      "file": "reject_opaque_over_wildcard.json",
+      "sha256": "ba09a09b9b1a327c3293553d79e633273f1e7995ec5f4a8fa6c8a603af5e389a",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] holds scopes its parent does not cover: drive.*",
+      "expectedHop": 1,
+      "expectedCause": "drive\\.\\*"
+    },
+    {
+      "file": "reject_principal_altered.json",
+      "sha256": "a31465e54ec6013292f3cca3f66dba73b40994fe82cd290030e08e7b70a12c86",
+      "expected": "principal_altered",
+      "actual": "principal_altered",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] sub (user) differs from DT_0's; the Principal must be identical in every token",
+      "expectedHop": 1,
+      "expectedCause": "\\bsub\\b"
+    },
+    {
+      "file": "reject_rank_order_mismatch.json",
+      "sha256": "29888e293e0ce6ec913e245aa1e8cd766ab4743715f656dd883557c9cbd9b013",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraint 'egress': Rank order for 'egress' differs from the parent's",
+      "expectedHop": 2,
+      "expectedCause": "egress"
+    },
+    {
+      "file": "reject_rank_outside_order.json",
+      "sha256": "0fe13a34e56662bd5f36c309ead1ca28ead027941ed822b13df055439e7adb95",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraints[0] ('egress') rank label 'everywhere' is not in its order",
+      "expectedHop": 2,
+      "expectedCause": "egress"
+    },
+    {
+      "file": "reject_rank_without_order.json",
+      "sha256": "038e9a1e2230332995692f5cc5ce229a9b93a3d7928afcdab1f2c15618326100",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] constraint 'egress' rank label 'none' carries no order",
+      "expectedHop": 2,
+      "expectedCause": "egress"
+    },
+    {
+      "file": "reject_reissued_parent.json",
+      "sha256": "a6cd60cfbb833d4b99358e1a0408fb4fbe11a2b04fb311eed2af27f05c1423d7",
+      "expected": "par_hash_mismatch",
+      "actual": "par_hash_mismatch",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] par_hash does not commit to the parent token presented",
+      "expectedHop": 2,
+      "expectedCause": "parent"
+    },
+    {
+      "file": "reject_root_without_principal.json",
+      "sha256": "a4550058f831c3f4ed452971a3338b159e6b2fff245ca6b9d94f7d16abc988a5",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 0,
+      "message": "token[0] sub must be a non-empty string naming the Principal",
+      "expectedHop": 0,
+      "expectedCause": "\\bsub\\b"
+    },
+    {
+      "file": "reject_second_detail.json",
+      "sha256": "5ab28e41ae3a09c482a9340041850f5dc519de0141b1987b749087f6517c380b",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 2,
+      "message": "token[2] authorization_details must carry exactly one detail, of type 'agent_delegation'; found 2",
+      "expectedHop": 2,
+      "expectedCause": "detail"
+    },
+    {
+      "file": "reject_unknown_detail_type.json",
+      "sha256": "7fdff7368f5274a9c5667c92eda71cf6cc37b45f7c42d1a40cc6790086eddb6c",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 0,
+      "message": "token[0] authorization detail type \"acme_site_policy\" is not 'agent_delegation'; an unimplemented detail type is a rejection",
+      "expectedHop": 0,
+      "expectedCause": "detail"
+    },
+    {
+      "file": "reject_unsafe_integer.json",
+      "sha256": "67c8197dd5d78257b1ae53e43ff213eb09fb2e00420abbec3ed13a49645ea341",
+      "expected": "malformed",
+      "actual": "malformed",
+      "pass": true,
+      "hop": 0,
+      "message": "token[0] payload: unsafe integer: integer 9007199254740992 is outside the binary64 exact range at offset 253",
+      "expectedHop": 0,
+      "expectedCause": "integer"
+    },
+    {
+      "file": "reject_wildcard_over_opaque.json",
+      "sha256": "f74433b36a77b3a1bf519179de96ae3bdc615d44ed923e116fed44fdb5dfaf6e",
+      "expected": "not_narrower",
+      "actual": "not_narrower",
+      "pass": true,
+      "hop": 1,
+      "message": "token[1] holds scopes its parent does not cover: drive.Read",
+      "expectedHop": 1,
+      "expectedCause": "drive\\.Read"
+    },
+    {
+      "file": "valid_audience_array.json",
+      "sha256": "205c800965e70eb6e1fddac6959650eb5ea68d98eae90e84e42e9a6516838914",
+      "expected": "accept",
+      "actual": "accept",
+      "pass": true
+    },
+    {
+      "file": "valid_chain.json",
+      "sha256": "2c49fbd9841b39d3d43a64d383ead866d779d9a3e600eeec38fe9bf9b3caed3e",
+      "expected": "accept",
+      "actual": "accept",
+      "pass": true
+    },
+    {
+      "file": "valid_opaque_exact.json",
+      "sha256": "ce0e24f79bf6522812559f03279f029d32bb2d930d4b11da81db60dbd3c71bb5",
+      "expected": "accept",
+      "actual": "accept",
+      "pass": true
+    },
+    {
+      "file": "valid_range_min_max.json",
+      "sha256": "5fe1da1537025a5db7dca2dbc1c322b3eec355124ba877d5e75c6894515ee64c",
+      "expected": "accept",
+      "actual": "accept",
+      "pass": true
+    },
+    {
+      "file": "valid_unknown_constraint_identical.json",
+      "sha256": "de44145eafa975d5ca81a0841f78539baf528893dcd64448a1d9ecaa70e8dbe3",
+      "expected": "accept",
+      "actual": "accept",
+      "pass": true
+    }
+  ]
+}
