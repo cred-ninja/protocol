@@ -1,5 +1,5 @@
 {
-  "source": "/Users/kieran/Projects/Cred/worktrees/sdk-draft-02-integration/packages/vault/src/index.ts",
+  "source": "packages/vault/src/index.ts",
   "node": "v26.8.1",
   "vectors": "vectors",
   "rows": [
