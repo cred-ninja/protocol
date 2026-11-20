@@ -3,6 +3,8 @@
 **An open credential delegation protocol for AI agents.**
 
 > **Status:** Individual Internet-Draft ([draft-sweeney-wimse-credential-delegation](https://datatracker.ietf.org/doc/draft-sweeney-wimse-credential-delegation/)), not an adopted standard · Aimed at the IETF WIMSE and OAuth working groups
+>
+> A second individual draft in the OAuth namespace, [draft-sweeney-oauth-brokered-authorization](https://datatracker.ietf.org/doc/draft-sweeney-oauth-brokered-authorization/), covers grant custody for short-lived client instances. Its source is in [`ietf/`](ietf/).
 
 ---
 

@@ -1,0 +1,725 @@
+---
+v: 3
+docname: draft-sweeney-oauth-brokered-authorization-00
+title: "OAuth Brokered Authorization: Grant Custody for Short-Lived Client Instances"
+abbrev: OAuth Brokered Authorization
+category: std
+submissiontype: IETF
+area: sec
+workgroup: Web Authorization Protocol
+date: 2026-11-20
+keyword:
+  - OAuth
+  - AI agents
+  - client instance
+  - bearer token
+  - API key
+  - broker
+venue:
+  group: Web Authorization Protocol (OAuth)
+  mail: oauth@ietf.org
+  github: cred-ninja/protocol
+author:
+  - name: Kieran Sweeney
+    email: kieran@kierans.net
+normative:
+  OAUTH21:
+    title: "The OAuth 2.1 Authorization Framework"
+    author:
+      - ins: D. Hardt
+      - ins: A. Parecki
+      - ins: T. Lodderstedt
+    date: 2026-10-31
+    seriesinfo:
+      Internet-Draft: draft-ietf-oauth-v2-1-17
+  RFC3986:
+    title: "Uniform Resource Identifier (URI): Generic Syntax"
+    author:
+      - ins: T. Berners-Lee
+      - ins: R. Fielding
+      - ins: L. Masinter
+    date: 2005-01
+    seriesinfo:
+      STD: "66"
+      RFC: "3986"
+      DOI: 10.17487/RFC3986
+  RFC6749:
+  RFC8705:
+    title: "OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"
+    author:
+      - ins: B. Campbell
+      - ins: J. Bradley
+      - ins: N. Sakimura
+      - ins: T. Lodderstedt
+    date: 2020-02
+    seriesinfo:
+      RFC: "8705"
+      DOI: 10.17487/RFC8705
+  RFC8707:
+    title: "Resource Indicators for OAuth 2.0"
+    author:
+      - ins: B. Campbell
+      - ins: J. Bradley
+      - ins: H. Tschofenig
+    date: 2020-02
+    seriesinfo:
+      RFC: "8707"
+      DOI: 10.17487/RFC8707
+  RFC9110:
+  RFC9126:
+    title: "OAuth 2.0 Pushed Authorization Requests"
+    author:
+      - ins: T. Lodderstedt
+      - ins: B. Campbell
+      - ins: N. Sakimura
+      - ins: D. Tonge
+      - ins: F. Skokan
+    date: 2021-09
+    seriesinfo:
+      RFC: "9126"
+      DOI: 10.17487/RFC9126
+  RFC9396:
+  RFC9449:
+  RFC9728:
+    title: "OAuth 2.0 Protected Resource Metadata"
+    author:
+      - ins: M. Jones
+      - ins: P. Hunt
+      - ins: A. Parecki
+    date: 2025-04
+    seriesinfo:
+      RFC: "9728"
+      DOI: 10.17487/RFC9728
+informative:
+  RFC6755:
+    title: "An IETF URN Sub-Namespace for OAuth"
+    author:
+      - ins: B. Campbell
+      - ins: H. Tschofenig
+    date: 2012-10
+    seriesinfo:
+      RFC: "6755"
+      DOI: 10.17487/RFC6755
+  RFC7591:
+    title: "OAuth 2.0 Dynamic Client Registration Protocol"
+    author:
+      - ins: J. Richer
+        role: editor
+      - ins: M. Jones
+      - ins: J. Bradley
+      - ins: M. Machulak
+      - ins: P. Hunt
+    date: 2015-07
+    seriesinfo:
+      RFC: "7591"
+      DOI: 10.17487/RFC7591
+  RFC7942:
+  RFC9068:
+  RFC9700:
+    title: "Best Current Practice for OAuth 2.0 Security"
+    author:
+      - ins: T. Lodderstedt
+      - ins: J. Bradley
+      - ins: A. Labunets
+      - ins: D. Fett
+    date: 2025-01
+    seriesinfo:
+      BCP: "240"
+      RFC: "9700"
+      DOI: 10.17487/RFC9700
+  RFC10017:
+    title: "OAuth 2.0 for Browser-Based Applications"
+    author:
+      - ins: A. Parecki
+      - ins: P. De Ryck
+      - ins: D. Waite
+    date: 2026-08
+    seriesinfo:
+      BCP: "212"
+      RFC: "10017"
+      DOI: 10.17487/RFC10017
+  ATTEST:
+    title: "OAuth 2.0 Attestation-Based Client Authentication"
+    author:
+      - ins: T. Looker
+      - ins: P. Bastian
+      - ins: C. Bormann
+    date: 2026-10-13
+    seriesinfo:
+      Internet-Draft: draft-ietf-oauth-attestation-based-client-auth-12
+  CLIENT-INSTANCE-ID:
+    title: "OAuth 2.0 Client Instance Identifiers"
+    author:
+      - ins: K. McGuinness
+    date: 2026-11-02
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-client-instance-id-01
+  AIMS:
+    title: "AI Identity Management System"
+    date: 2026-11-02
+    seriesinfo:
+      Internet-Draft: draft-ietf-wimse-aims-01
+  GRANT-MGMT:
+    title: "Grant Management for OAuth 2.0"
+    author:
+      - ins: T. Lodderstedt
+      - ins: S. Low
+      - ins: D. Postnikov
+    date: 2023-05
+    target: https://openid.net/specs/oauth-v2-grant-management-ID1.html
+    refcontent: OpenID Foundation FAPI Working Group, oauth-v2-grant-management-03
+  MISSION-RA:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    author:
+      - ins: K. McGuinness
+    date: 2026-10-22
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-resource-access-00
+  CRED-DELEG:
+    title: "Credential Delegation Protocol for AI Agents in Multi-System Environments"
+    author:
+      - ins: K. Sweeney
+    date: 2026-10-30
+    target: https://datatracker.ietf.org/doc/draft-sweeney-wimse-credential-delegation/
+    refcontent: Work in Progress, draft-sweeney-wimse-credential-delegation-02
+
+--- abstract
+
+An OAuth client identifier names a registration. It does not name the running instance that presents a token. Where one registered client runs as many short-lived instances, as agent platforms do, work now in progress binds refresh tokens to the instance. Where a refresh token is bound to the instance, an authorization that a user gave through one instance ends with that instance, and no specification says how the next instance comes to act under it.
+
+This document specifies one answer. A broker is the single, durable OAuth client of an upstream resource. It holds the grant and the credential for that resource and makes each request itself. A resource owner authorizes a registered client to use that grant through the broker, and the authorization server records the authorization against the client and not against any instance. Each instance obtains a short-lived, sender-constrained access token for the broker with the client credentials grant. An instance never holds a grant, a refresh token, or the upstream credential, and no instance is registered anywhere. This document defines the authorization details type that carries this authority, the checks the broker makes before it acts, and one error code.
+
+--- middle
+
+# Introduction
+
+## The Client, the Instance, and the Grant {#problem}
+
+{{OAUTH21}} defines a client as an application that makes protected resource requests on behalf of a resource owner, and a client identifier as a string that represents the registration information the client provided. It does not say whether a registration stands for a piece of software, a deployment of it, or one running process. {{RFC7591}} named the difference in 2015, defining a client instance as a deployed instance of a piece of client software, but nothing in the core framework depends on it.
+
+For a web application with one deployment, the difference did not matter. For agent platforms it does. One registered client runs as many concurrent instances, each lives for a task or a session, and some start further instances.
+
+Work in progress identifies the instance. {{ATTEST}} authenticates a client instance by a key the instance generated and an attestation over that key, and requires a refresh token to be bound to the client instance and not only to the client. {{CLIENT-INSTANCE-ID}} adds an instance identifier that survives a key change, and has the authorization server record the instance at grant time and require the same instance at refresh. {{AIMS}} treats an agent as a workload that acts as an OAuth client and is named in the `client_id` claim.
+
+These are sound, and they sharpen a question that OAuth has left to authorization server policy: where does a grant live when the instance that obtained it is gone? If the grant is reachable only through a refresh token bound to an instance, it ends with the instance, and the resource owner is asked again for each new one. If every instance is instead registered as a client of its own, each needs its own registration and its own consent at every authorization server it touches, and the resource owner can no longer tell what was approved.
+
+A third course exists. A confidential client's backend can keep a refresh token that is bound to the client and not to an instance ({{Section 4.3 of OAUTH21}}), and {{ATTEST}} lets a profile bind refresh tokens to something other than the instance key (its Section 13). That keeps a long-lived credential in the client's own systems. This document keeps the grant at the authorization server. Of the grant, the client keeps only an identifier, which is of no use without client authentication ({{any-instance}}).
+
+## The Answer Given Here
+
+This document answers the question for resources that are reached through a broker, by fixing what each party holds:
+
+| Party | What it is | What it holds |
+|---|---|---|
+| The broker | The one OAuth client of the upstream resource. Durable. | The upstream grant and the upstream credential. |
+| The logical client | The client identified by `client_id` at the broker's authorization server. | A brokered authorization, recorded at the authorization server, and the upstream grant identifiers, which it gives to instances. |
+| The client instance | One running instance of the logical client. Short-lived. | A key, short-lived access tokens bound to it, and the grant identifiers it is given. No grant, no refresh token, no upstream credential. Its key works, in effect, as a refresh token for every resource owner ({{any-instance}}). |
+{: title="Who Holds What" #who-holds-what}
+
+A resource owner authorizes the logical client once. Any instance that authenticates as that client can then obtain an access token for the broker with the client credentials grant, which {{Section 4.2 of OAUTH21}} permits for the resources of another resource owner when that has been previously arranged with the authorization server. The brokered authorization is that arrangement. When an instance ends, its tokens expire and nothing else changes. The upstream resource sees one client and needs no change, which matters because many upstream resources accept only a bearer token or a static API key and will not adopt instance-aware mechanisms.
+
+## Existing Work {#existing}
+
+A component that holds a credential and makes each request itself is not new. {{Section 9.1 of OAUTH21}} and {{Section 6.1 of RFC10017}} describe it for browser applications as the Backend for Frontend, and {{RFC10017}} ranks it above the token-mediating backend of its Section 6.2, which passes the access token to the application.
+
+Two pieces of the mechanism have earlier forms. Grant Management for OAuth 2.0 {{GRANT-MGMT}} makes a grant an object at the authorization server, named by a `grant_id` that a client presents in later authorization requests. {{MISSION-RA}} defines an authorization details type with path-prefix matching at a segment boundary (its Section 4), a subset rule (its Section 5), and enforcement where the token is presented (its Section 7).
+
+This document defines a type of its own, and not a use of that one, for three reasons. An entry of {{MISSION-RA}} is enforced by the resource server that the token is presented to (its Section 7), and its actions are identifiers that the serving resource defines (its Section 3). The entries defined here are enforced by a broker in front of a resource that implements nothing, and are stated in terms that resource already has: HTTP methods and paths. They name the upstream grant that the broker is to use, and {{MISSION-RA}} gives no authority to an entry with a member it does not define (its Section 7). And they are redeemed at the token endpoint with client authentication alone. A broker could also be the enforcement point for entries of {{MISSION-RA}}; that is not defined here ({{open}}).
+
+## What This Document Defines
+
+- The brokered authorization: what it records, how it is made, and how a client instance obtains an access token under it ({{brokered-authz}}).
+- An authorization details type {{RFC9396}} that carries the operations a token permits and the upstream grant it uses ({{authz-details}}).
+- What the broker checks before it acts, what it never does with the upstream credential, and one new error code ({{broker}}).
+
+This document does not define how an instance is identified or attested. It works with any client authentication method that proves possession of a key held by the instance, and it carries instance context where the authorization server has it ({{instance-context}}).
+
+Apart from the path computation, the custody rules, and the upstream grant error of {{broker}}, this document does not define how the broker builds the request it sends upstream or how it filters the response. Those rules decide whether the arrangement is safe in practice, and {{forwarding}} lists what they have to cover.
+
+It defines no delegation chain between agents, no receipt or audit record, and no limit accounting. It does not define how the broker comes to hold an upstream credential.
+
+# Conventions and Definitions {#terms}
+
+{::boilerplate bcp14-tagged}
+
+This document uses "authorization server", "resource server", "protected resource", "client", "resource owner", and "access token" as defined in {{OAUTH21}}.
+
+Logical client:
+: The OAuth client identified by a client identifier at the broker's authorization server. Many client instances can authenticate as it. The term is taken from {{CLIENT-INSTANCE-ID}}.
+
+Client instance:
+: One deployed, running instance of the logical client's software, as in {{RFC7591}} and {{ATTEST}}. It holds a key that no other instance holds.
+
+Upstream resource:
+: A protected resource that the broker calls. It is identified by one origin and one path prefix. Where an upstream service gives each account its own origin, the origin can be fixed per upstream grant ({{operations}}).
+
+Upstream credential:
+: What the upstream resource accepts as proof of authority and the broker holds: a bearer access token, together with any refresh token from which it is renewed, or a static API key. Passwords and private keys are not covered by this document.
+
+Derived credential:
+: Anything obtained from the upstream resource that lets its holder act at the upstream resource without the broker. Examples are a newly issued API key or token, a session cookie, and a URL that carries its own authorization.
+
+Upstream grant:
+: The authority that one resource owner has given the broker at one upstream resource, of which the upstream credential is the evidence. The broker records each upstream grant with the resource owner who made it. The authorization server assigns an identifier for it to each logical client ({{authz-details}}).
+
+Brokered authorization:
+: A record at the broker's authorization server that a resource owner permits a logical client to have the broker perform stated operations under one upstream grant ({{brokered-authz}}).
+
+Broker:
+: A server that holds upstream credentials and uses them to make requests to upstream resources for client instances, under the rules of this document. It is an HTTP gateway ({{Section 3.7 of RFC9110}}). Together with its authorization server it is one party.
+
+Broker resource:
+: A protected resource that the broker exposes and that stands for exactly one upstream resource.
+
+Operation:
+: One kind of request that a broker resource offers, defined in the broker's configuration ({{operations}}).
+
+Release:
+: Any act by which a client instance comes to hold an upstream credential or a derived credential.
+
+Extends at a segment boundary:
+: A path P extends a path Q at a segment boundary when P begins with Q and either Q ends with "/" or the next character of P after Q is "/".
+
+The word "broker" is also used elsewhere for an authorization server that federates to another authorization server. That is a different role and is not meant here.
+
+# Model and Assumptions {#model}
+
+~~~ ascii-art
+ +-----------+  (1) client credentials  +---------------+
+ |           |------------------------->| Broker's      |
+ | Client    |<-------------------------| authorization |
+ | instance  |  (2) access token        | server        |
+ |           |                          +---------------+
+ |           |  (3) request             +--------+  (4)  +----------+
+ |           |------------------------->|        |------>|          |
+ |           |<-------------------------| Broker |<------| Upstream |
+ +-----------+  (6) response            +--------+  (5)  | resource |
+                                                         +----------+
+~~~
+
+Beforehand, the resource owner has authorized the broker at the upstream resource (the upstream grant), and has authorized the logical client at the broker's authorization server (the brokered authorization).
+
+1. A client instance authenticates as the logical client and asks for an access token with the client credentials grant, naming the broker resource, the upstream grant, and the operations it needs.
+2. The authorization server checks the request against the brokered authorization and issues a short-lived access token bound to the instance's key.
+3. The instance sends an HTTP request to the broker resource with the token and proof of possession.
+4. The broker validates the token and the proof, matches the request to a configured operation, checks that the token permits it, and sends the corresponding request upstream with the credential of the upstream grant the token names.
+5. The upstream resource answers the broker.
+6. The broker returns the answer.
+
+This document rests on the following assumptions. Where one does not hold, the properties claimed in {{security}} do not hold either.
+
+- The broker and its authorization server are operated by one party and share the record of upstream grants and brokered authorizations.
+- The authorization server knows which resource owner made each upstream grant.
+- Every instance of a logical client is trusted with every brokered authorization made to that client ({{any-instance}}).
+- A client instance's key cannot be exported by the part of the instance that an attacker can influence, and is not copied to another instance ({{client-key}}).
+- One upstream credential stands for one resource owner ({{shared-credential}}).
+- The broker's operator knows the upstream resource well enough to list the operations that are safe to offer ({{returning}}).
+- The upstream resource reads a path as {{RFC3986}} describes. It does not fold case, give meaning to path parameters, or decode a second time.
+
+# Brokered Authorizations {#brokered-authz}
+
+## The Record {#record}
+
+A brokered authorization records:
+
+- the resource owner who made it;
+- the logical client it was made to;
+- one broker resource and one upstream grant at that broker resource, made by the same resource owner;
+- the operations permitted, as in {{authz-details}};
+- the issuer identifier of the authorization server that recorded it;
+- when it ends, if it has an end.
+
+There is at most one brokered authorization for a given logical client and upstream grant.
+
+A brokered authorization is not bound to a client instance, to a key, or to a refresh token. It persists until it ends or the resource owner withdraws it.
+
+The authorization server MUST NOT record a brokered authorization unless the resource owner who made the upstream grant, or a party entitled under the deployment's policy to act for that resource owner, has approved it for that logical client. Authenticating the client is not enough.
+
+## Making a Brokered Authorization {#making}
+
+A resource owner makes a brokered authorization through the authorization code grant ({{Section 4.1 of OAUTH21}}) at the broker's authorization server. The authorization request MUST be a pushed authorization request {{RFC9126}} in which the client instance authenticates as in {{redeeming}}. The authorization server MUST reject a request for this type that was not pushed. The request carries an `authorization_details` parameter {{RFC9396}} with exactly one object of the type defined in {{authz-details}}.
+
+The authorization server shows the resource owner the logical client, the broker resource, the upstream resource it stands for, and the operations requested. It MUST make plain that:
+
+- any running instance of the client can use the authorization, without further approval, until it ends or is withdrawn;
+- a path includes everything beneath it, including operations that the broker adds there later;
+- where an operation requested hands the instance a URL that carries its own authorization ({{returning}}), that it does.
+
+Where the resource owner has more than one upstream grant at that broker resource, the authorization server has the resource owner choose one. Where the resource owner has none, the authorization server either has one made in the same interaction or returns the `access_denied` error.
+
+The brokered authorization is recorded when the authorization code is redeemed, and not before. It replaces any earlier brokered authorization for the same logical client and upstream grant. The authorization server adds the upstream grant identifier to the object, as {{Section 7.1 of RFC9396}} allows a type to provide.
+
+Where the authorization server did not itself register the client, as with a client identifier that is a URL under the client's control, the brokered authorization MUST have an end.
+
+The token response contains the `authorization_details` as recorded, including the upstream grant identifier. The access token it returns meets the requirements of {{redeeming}}. The authorization server MUST NOT issue a refresh token: an instance that needs a further access token obtains it under {{redeeming}}.
+
+An authorization server MAY provide other ways to make a brokered authorization. Those are outside this document. The rule in {{record}} applies to all of them.
+
+## Obtaining an Access Token {#redeeming}
+
+A client instance obtains an access token for a broker resource with the client credentials grant ({{Section 4.2 of OAUTH21}}). The token request:
+
+- MUST authenticate the instance as the logical client with a method that proves possession of a private key held by that instance, such as {{ATTEST}} or mutual TLS {{RFC8705}}. A symmetric client secret MUST NOT be accepted;
+- MUST carry an `authorization_details` parameter with exactly one object of the type defined in {{authz-details}}, including its `upstream_grant` member;
+- MUST present, as the key the access token is to be bound to, the key with which the instance authenticates. The authorization server MUST refuse any other. With {{ATTEST}} that is its combined mode, in which the DPoP key is the Client Instance Key (its Section 5.2). With mutual TLS it is the client certificate.
+
+The logical client MUST be a confidential client ({{Section 2.1 of OAUTH21}}), which {{Section 4.2 of OAUTH21}} requires for this grant.
+
+The authorization server MUST issue an access token only if a brokered authorization exists for that logical client, that broker resource, and that upstream grant, has not ended or been withdrawn, and covers the object requested ({{covering}}). Otherwise it responds with the `invalid_authorization_details` error of {{RFC9396}}. The response MUST NOT reveal whether the upstream grant identifier exists.
+
+The access token:
+
+- MUST be sender-constrained to the key with which the instance authenticated;
+- MUST have as its audience the resource identifier {{RFC8707}} of that one broker resource;
+- MUST convey, in its `authorization_details` claim or in the introspection response ({{Section 9 of RFC9396}}), exactly one object of the type defined in {{authz-details}}, which names that broker resource and that upstream grant and contains no operation beyond those requested;
+- where it is a JWT access token {{RFC9068}}, MUST carry the client identifier in both `sub` and `client_id`. The resource owner is identified only through `upstream_grant`;
+- MUST NOT be accompanied by a refresh token.
+
+The lifetime of an access token SHOULD NOT exceed 300 seconds. Where the broker relies on token expiry to apply a withdrawal, the lifetime MUST NOT exceed the limit stated under {{withdrawal}}.
+
+A `brokered_access` object MUST NOT be conveyed in an access token issued in any other way than under {{making}} or this section.
+
+An example token request, with line breaks added for display and the parameter value shown before form encoding:
+
+~~~ http-message
+POST /token HTTP/1.1
+Host: as.broker.example
+Content-Type: application/x-www-form-urlencoded
+OAuth-Client-Attestation: eyJ...
+DPoP: eyJ...
+
+grant_type=client_credentials
+&authorization_details=[{
+   "type":"brokered_access",
+   "locations":["https://broker.example/tracker"],
+   "upstream_grant":"ug_5Yc1r0mB7tQk2VxN9aLd3w",
+   "operations":[{"methods":["GET"],"path":"/projects/42/issues"}]
+ }]
+~~~
+
+## Instance Context {#instance-context}
+
+Where the authorization server has instance context for the authenticated instance, such as the `client_instance` claim of {{CLIENT-INSTANCE-ID}} (its Section 7.1), it SHOULD convey it with the access token.
+
+Instance context grants no authority under this document. The broker uses the key the token is bound to as the identity of the instance when it refuses an instance ({{withdrawal}}).
+
+# The Authorization Details Type {#authz-details}
+
+This document defines the authorization details type `brokered_access`. An object of this type has the following members.
+
+`type`:
+: REQUIRED. The string `brokered_access`.
+
+`locations`:
+: REQUIRED. An array with exactly one element, the resource identifier of a broker resource.
+
+`upstream_grant`:
+: The upstream grant identifier. OPTIONAL in an authorization request, where the authorization server supplies it ({{making}}). REQUIRED in a token request under {{redeeming}}, in a token response, and in what is conveyed to the broker. The value is an opaque string assigned by the broker's authorization server. It confers nothing on a party that cannot authenticate as the logical client. Among instances of one logical client it is all that separates one resource owner's authorization from another's. It MUST contain at least 128 bits of randomness, MUST be specific to one logical client, and MUST NOT be reused for a different upstream grant.
+
+`operations`:
+: REQUIRED. A non-empty array of objects, each with these members:
+
+  `methods`:
+  : REQUIRED. A non-empty array of HTTP method names, as they appear in a request. HEAD MUST NOT appear; an entry that lists GET permits HEAD.
+
+  `path`:
+  : REQUIRED. A path relative to the broker resource, beginning with "/". The value "/" stands for the whole broker resource. The value MUST be in the form that {{target}} produces: no dot-segments, no backslash, no `%2F` or `%5C`, and normalized as that section describes.
+
+  `names`:
+  : OPTIONAL. A non-empty array of operation names ({{operations}}). When present, the entry applies only to configured operations with one of those names.
+
+An object MUST NOT contain the `actions`, `datatypes`, `identifier`, or `privileges` members of {{Section 2.2 of RFC9396}}. As {{Section 5 of RFC9396}} requires, the authorization server refuses an object with an unknown member or a member that does not conform.
+
+For example:
+
+~~~ json
+{
+  "type": "brokered_access",
+  "locations": ["https://broker.example/tracker"],
+  "upstream_grant": "ug_5Yc1r0mB7tQk2VxN9aLd3w",
+  "operations": [
+    { "methods": ["GET"], "path": "/projects/42/issues" },
+    { "methods": ["POST"], "path": "/projects/42/issues",
+      "names": ["issue.comment"] }
+  ]
+}
+~~~
+
+## When an Entry Permits a Request {#permits}
+
+An entry of `operations` permits a request that has been matched to a configured operation ({{operations}}) when all of the following hold:
+
+1. the request method is in `methods`, where a HEAD request is treated as GET;
+2. the request path, relative to the broker resource and as computed in {{target}}, equals `path` or extends it at a segment boundary;
+3. if the entry has `names`, the configured operation has a name and that name is in `names`;
+4. if the configured operation is one that the upstream resource determines from request content ({{operations}}), the entry has `names`.
+
+An object permits a request when at least one of its entries does. Comparison of methods, paths, and names is by exact string.
+
+## When One Object Covers Another {#covering}
+
+An object A covers an object B when both have the same single `locations` value and the same `upstream_grant`, and for every entry of B there is an entry of A such that:
+
+1. every method of the entry of B is in the `methods` of the entry of A;
+2. the `path` of the entry of B equals the `path` of the entry of A or extends it at a segment boundary;
+3. if the entry of A has `names`, the entry of B has `names` and every name in it is in the `names` of the entry of A. If the entry of A has no `names`, the entry of B has none.
+
+The authorization server issues a token under {{redeeming}} only when the brokered authorization covers the object requested.
+
+## Metadata
+
+A broker resource that publishes protected resource metadata {{RFC9728}} includes `brokered_access` in `authorization_details_types_supported`. The broker's authorization server includes it in its own `authorization_details_types_supported` ({{Section 10 of RFC9396}}).
+
+This document does not define how a client learns the operation names a broker resource uses ({{open}}).
+
+# The Broker {#broker}
+
+## Broker Resources and Operations {#operations}
+
+Each broker resource MUST correspond to exactly one upstream resource. The correspondence, and the operations the broker resource offers, are fixed in the broker's configuration and MUST NOT depend on anything in a request. The one exception is the origin of the upstream resource, which can be fixed per upstream grant when that grant is made.
+
+An operation is defined by:
+
+- a method. An operation MUST NOT be configured with the method HEAD. A HEAD request matches an operation whose method is GET;
+- a path relative to the broker resource, or a path pattern in which each variable matches exactly one non-empty segment;
+- the names of the query parameters it accepts. The broker parses the query as name and value pairs separated by "&" only;
+- optionally, a name, which is a string unique within the broker resource. An operation name MUST NOT be reassigned to a different operation;
+- where the upstream resource determines what is done from the request content and not from the method and path alone, a name and the constraints on content that identify what is permitted. Examples are a single endpoint that accepts both queries and mutations, a remote procedure call named in the content, and a batch of calls in one request.
+
+An operation's query parameter names MUST NOT include one that the upstream resource accepts as a credential or uses to choose the account, tenant, or user that a request acts as.
+
+An operation MUST NOT be configured where the upstream resource lets a query parameter, a request field, or request content override the method or the target, unless the operation's definition excludes that override.
+
+An operation MUST NOT be configured with the method CONNECT or TRACE.
+
+## The Request Path {#target}
+
+The broker resource's path prefix is the path of its resource identifier, or "/" if that is empty. The broker computes the path of a request relative to the broker resource as follows.
+
+1. The broker MUST reject, with a 400 (Bad Request) status code, a path that contains a backslash or the percent-encoded octets `%2F` or `%5C` in either case.
+2. The broker applies the normalizations of Sections 6.2.2.1 and 6.2.2.2 of {{RFC3986}} once. It MUST then reject, with a 400 (Bad Request) status code, a path with a segment that contains ";" and that, once everything from its first ";" is removed, is "." or "..". It then applies the remove_dot_segments procedure of {{Section 5.2.4 of RFC3986}}.
+3. The result MUST equal the broker resource's path prefix or extend it at a segment boundary. Otherwise the broker MUST reject the request with a 400 (Bad Request) status code.
+4. The broker removes the broker resource's path prefix, without any trailing "/", from the result. What remains, or "/" if nothing remains, is the path relative to the broker resource.
+
+That relative path is the one matched against operations, the one tested in {{permits}}, and the one from which the path sent upstream is formed. The broker MUST NOT use any other form of the path.
+
+A broker MUST NOT provide a broker resource whose upstream target is chosen by the client instance.
+
+## Access Tokens {#tokens}
+
+An access token presented at a broker resource MUST be sender-constrained, with DPoP {{RFC9449}} or with mutual TLS {{RFC8705}}. {{Section 1.4.3 of OAUTH21}} and {{RFC9700}} recommend sender-constrained access tokens. This document requires them, because a bearer token for a broker resource would be a copyable credential for everything the broker can do with it. The broker MUST reject, with a 401 (Unauthorized) status code and the `invalid_token` error, an access token that carries no key confirmation.
+
+The broker MUST reject an access token unless its audience is the resource identifier of the broker resource at which it is presented, compared as an exact string.
+
+The broker MUST reject an access token unless it conveys exactly one `brokered_access` object whose `locations` value is that same resource identifier.
+
+The broker validates the token and the proof of possession as any protected resource does, and returns the errors defined in {{Section 5.3 of OAUTH21}} and {{Section 7.1 of RFC9449}}. Where mutual TLS is used and TLS is terminated in front of the broker, {{Section 6.5 of RFC8705}} applies.
+
+## Deciding Whether to Act {#decision}
+
+Before it sends anything upstream, the broker MUST establish that:
+
+1. the request matches exactly one configured operation: its method, its path, every query parameter name, and any content constraint ({{operations}}); and
+2. the `brokered_access` object the token conveys permits the request ({{permits}}).
+
+Where the request matches no operation, the broker responds with a 404 (Not Found) status code, or 405 (Method Not Allowed) where the path matches and the method does not. Where it matches more than one, the configuration is at fault and the broker responds with a 500 (Internal Server Error) status code. Where the object does not permit the request, the broker responds with a 403 (Forbidden) status code and the `insufficient_scope` error. In none of these cases is anything sent upstream.
+
+## Selecting the Upstream Grant {#selection}
+
+The broker resource is determined by the request target. The upstream grant is the one named by `upstream_grant` in the `brokered_access` object the validated access token conveys, and by nothing else.
+
+The broker MUST NOT take the upstream grant, the resource owner, or any other input to the choice of upstream credential from the request target, from a request field, from request content, or from the token's subject.
+
+The broker MUST reject the request if the upstream grant named does not belong to the broker resource at which the token is presented.
+
+The broker MUST reject a token unless it was issued by the issuer recorded with the brokered authorization that the upstream grant identifier names.
+
+## Withdrawal {#withdrawal}
+
+A broker that accepts a token on its signature and expiry alone will keep accepting it after the brokered authorization behind it has been withdrawn, until the token expires. Holding the upstream credential at the broker does not change that.
+
+A broker MUST apply the withdrawal of a brokered authorization, and the refusal of a particular instance key, to requests it receives after a delay no longer than a limit that the deployment states. A broker that checks the current state of the brokered authorization at each request has a limit of zero. A broker that relies on token expiry has a limit equal to the longest lifetime of the tokens it accepts.
+
+A key can be refused by the logical client or by the broker's operator. How either asks is outside this document.
+
+The end of a client instance requires no action. Its tokens expire. The brokered authorization and the upstream grant are not affected.
+
+## The Upstream Credential Is Not Released {#custody}
+
+The upstream grant and any upstream refresh token belong to the broker as the client of the upstream resource. They are never bound to a client instance.
+
+The broker MUST NOT place an upstream credential in a response it generates or in a field it adds to a response.
+
+The broker and its authorization server MUST NOT provide an interface that returns an upstream credential to a client instance.
+
+The broker MUST send an upstream credential only to the upstream resource it belongs to and, where it is an OAuth credential, to the token endpoint of the authorization server that issued it.
+
+The broker MUST NOT forward to the upstream resource a header field received from a client instance that the upstream resource accepts as a credential or uses to choose the account, tenant, or user that a request acts as.
+
+The broker MUST NOT forward to a client instance a response header field in which the upstream resource conveys a credential or a challenge, such as `Set-Cookie` or `WWW-Authenticate`. It follows that a `WWW-Authenticate` field in a response from a broker resource always comes from the broker.
+
+A component that exercises an upstream credential on one path and releases the same credential on another does not have the properties this document describes.
+
+## Errors About the Upstream Grant {#upstream-auth}
+
+The broker can lack a usable upstream credential: the upstream grant has expired or was withdrawn at the upstream resource, or the upstream resource refuses the credential for a reason the broker cannot see. The instance's own token is not at fault and a new one will not help.
+
+When the broker has no usable upstream credential for the request, or the upstream resource answers 401 (Unauthorized) and the broker cannot obtain a credential that the upstream resource accepts, the broker MUST respond with a 403 (Forbidden) status code and a `WWW-Authenticate` challenge, for the scheme the instance used, whose `error` parameter is `upstream_authorization_required`. It does not forward the upstream 401.
+
+~~~ http-message
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: DPoP error="upstream_authorization_required",
+    error_description="The broker has no credential that the
+    upstream resource accepts for this request."
+~~~
+
+This error does not indicate that the access token is invalid. An instance that obtains a new access token in response to it will receive the same error. The remedy is for the resource owner to authorize the broker again at the upstream resource.
+
+## Forwarding {#forwarding}
+
+Apart from what {{target}}, {{custody}}, and {{upstream-auth}} require, how the broker builds the request it sends upstream and how it returns the response are outside this document. A broker's rules for them have to cover at least:
+
+- how the path sent upstream is formed from the relative path of {{target}};
+- where the upstream host comes from, and that it is never taken from a value in a request;
+- which request and response header fields pass, as an explicit list;
+- how the query is rebuilt, so that the broker and the upstream resource read the same parameters;
+- redirects, and that a credential is never sent to a redirect target outside the upstream resource;
+- renewal of the upstream credential, and that the place of renewal never comes from an upstream response;
+- stored responses, and that one upstream grant's response never answers a request under another;
+- replay of a proof of possession, which covers the method and path of a request and not its query or content;
+- what an instance can conclude when the broker fails to get a response, and when, if ever, a request that may have reached the upstream resource is sent a second time.
+
+# Security Considerations {#security}
+
+## The Broker Holds Everything
+
+A broker concentrates upstream credentials, often for many resource owners and many upstream resources. Compromise of the broker is compromise of all of them. A resource owner who uses a broker is trusting it with everything the upstream grant allows. Nothing in this document reduces that trust. It moves the grant and the credential out of every instance and into one place.
+
+## Any Instance of the Client Can Act {#any-instance}
+
+A brokered authorization is made to a logical client. Any instance that can authenticate as that client and knows the upstream grant identifier can obtain a token under it. That is the purpose: it is what lets a new instance act without asking the resource owner again. It is also the main exposure of this design. An instance that serves one resource owner can ask for a token under another resource owner's brokered authorization to the same client, if it learns that identifier.
+
+Between logical clients the design does not rest on the identifier being unknown. Between instances of one client it does. The control is the logical client's own: whatever authenticates its instances decides which code runs as that client, and the client decides which instance is given which identifier. A resource owner who approves a brokered authorization is trusting the logical client with that, as a user who authorizes any confidential client trusts its backend with the tokens of all its users. The comparison holds only where every instance is as trusted as that backend. An instance that reads untrusted content is not. The credential with which an instance authenticates works, in effect, as a refresh token for every resource owner who has made a brokered authorization to that client.
+
+A logical client whose instances run in places it does not control, such as a customer's infrastructure, is a poor fit for a single client identifier under this document. This document defines no way to restrict a brokered authorization to some instances of the client ({{open}}).
+
+## The Instance's Key {#client-key}
+
+Everything this document says about access tokens depends on the instance's key. A key that sits in the memory or the files of the same process that reads untrusted content is as easy to copy as a bearer token. An instance that an attacker can induce to disclose a bearer credential can be induced to disclose such a key.
+
+The arrangement is only better than a bearer credential where the key cannot be exported by the part of the instance that an attacker can influence: held in hardware, in an operating system key store, or in a separate process that signs proofs and does not reveal the key. Even then, an attacker who controls the instance can make any request the token permits, and can obtain further tokens under {{redeeming}}, for as long as it controls the instance. The broker and the brokered authorization limit what that is. They do not make a compromised instance safe.
+
+## Operations That Return Credentials {#returning}
+
+Custody is defeated if an instance can get a derived credential out of the upstream resource. Operations that do this include:
+
+- operations that create or return credentials, such as an endpoint that issues an API key or a personal access token for the resource owner's account;
+- operations that reflect the request, including its header fields, in the response;
+- operations that change where the upstream resource sends credentials or secrets, such as registering a webhook or a redirect URI that the instance controls.
+
+An operation of these kinds MUST NOT be configured ({{operations}}).
+
+An operation whose response contains a URL that carries its own authorization, as many download operations do, releases a derived credential for one object for a limited time. It SHOULD NOT be configured. Where it is, the authorization server MUST tell the resource owner so when the brokered authorization is made ({{making}}).
+
+The list of operations is only as good as the operator's knowledge of the upstream resource. An upstream resource can add a credential-returning behavior to an existing operation without notice. Where the operation is determined by content, the content constraint has to be at least as exact as the upstream resource's own parsing. These are limits of the arrangement, not of this document's wording.
+
+## Requests That Are Not What They Seem
+
+The broker decides on a request and the upstream resource acts on one. Any difference between how the two read the same message is a way around the decision. The path computation ({{target}}), the operation list ({{operations}}), and the forwarding rules a broker adopts ({{forwarding}}) each close one such difference. They do not close differences in how the upstream resource parses content, and they do nothing about content in a response that is meant to mislead the instance that reads it.
+
+A `path` in a `brokered_access` object is a prefix. An entry for "/projects/42" without `names` permits every configured operation at or beneath it with the listed methods, except one determined by request content.
+
+## A Credential Shared Between Resource Owners {#shared-credential}
+
+Some upstream resources issue one credential for a whole organization. Where a broker uses one upstream credential for requests made under several resource owners' authority, the upstream resource enforces nothing between them, and the broker's operation list and token checks are the only separation. This document's rules do not make that safe. They assume one upstream credential per resource owner.
+
+## What the Upstream Resource Sees
+
+The upstream resource sees one client, the broker. It cannot tell which logical client or which instance caused a request, and it applies its rate limits and quotas to the credential. Instances that share an upstream grant share those limits, and one can exhaust them for the others. A broker SHOULD limit each logical client and each instance key separately.
+
+Attribution of a request to an instance exists only at the broker. A broker SHOULD keep, for each request it sends upstream, the client identifier, the thumbprint of the key the token was bound to, any instance context, and the upstream grant identifier. This document defines no format for that record.
+
+## Withdrawal Is Not Immediate
+
+Withdrawal of a brokered authorization stops new tokens at once and takes effect at the broker within the limit stated under {{withdrawal}}, and not sooner. A request that the broker has already sent upstream is not recalled.
+
+Withdrawing the upstream grant itself is done at the upstream resource and is outside this document.
+
+# Privacy Considerations
+
+The broker sees every request and every response it handles, in full, for every resource owner and client it serves.
+
+The upstream resource sees the broker and not the instance. It does not learn which client or instance made a request unless the broker tells it.
+
+An upstream grant identifier is a stable value that stands for one resource owner at one upstream resource. It is seen by the logical client and its instances. It is specific to one logical client ({{authz-details}}), so two clients cannot correlate a resource owner by it.
+
+# IANA Considerations {#iana}
+
+## OAuth Extensions Error Registration
+
+This document requests registration of the following value in the "OAuth Extensions Error Registry" established by {{Section 11.4 of RFC6749}}, under the extension point described in {{Section 6.5 of OAUTH21}}.
+
+Name:
+: `upstream_authorization_required`
+
+Usage Location:
+: resource access error response
+
+Protocol Extension:
+: OAuth Brokered Authorization
+
+Change Controller:
+: IETF
+
+Reference:
+: {{upstream-auth}} of this document
+
+## Authorization Details Type
+
+{{RFC9396}} establishes no registry of authorization details types. This document makes no request for the type `brokered_access`. The plain type name departs from the recommendation in {{Section 2.1 of RFC9396}}. A URN under `urn:ietf:params:oauth` {{RFC6755}} is the alternative.
+
+# Implementation Status {#impl-status}
+
+Note to the RFC Editor: please remove this section and the reference to {{RFC7942}} before publication.
+
+This section records the status of known implementations of the protocol defined by this specification at the time of posting of this Internet-Draft, and is based on a proposal described in {{RFC7942}}. The description of implementations in this section is intended to assist the IETF in its decision processes in progressing drafts to RFCs. Please note that the listing of any individual implementation here does not imply endorsement by the IETF. Furthermore, no effort has been spent to verify the information presented here that was supplied by IETF contributors. This is not intended as, and must not be construed to be, a catalog of available implementations or their features. Readers are advised to note that other implementations may exist.
+
+According to {{RFC7942}}, "this will allow reviewers and working groups to assign due consideration to documents that have the benefit of running code, which may serve as evidence of valuable experimentation and feedback that have made the implemented protocols more mature. It is up to the individual working groups to use this information as they see fit".
+
+## Cred SDK
+
+Implementer:
+: Kieran Sweeney (author of this document)
+
+Location:
+: https://github.com/cred-ninja/sdk
+
+License:
+: Apache-2.0
+
+Maturity:
+: Experimental. It does not implement this document.
+
+Contact:
+: kieran@kierans.net
+
+The following is taken from {{CRED-DELEG}} and was not checked against the code. The implementation follows the same division of custody: provider credentials stay in the server's vault, the server makes the upstream call, and by default the server hands no provider token to an agent. It differs from this document as follows. An agent holds a Delegation Token as defined in {{CRED-DELEG}}, and not an access token obtained with the client credentials grant, and the `brokered_access` type is not used. An exercise request names an upstream URL, method, and body at a single endpoint, where this document has the instance send an ordinary request to a broker resource. Requests are checked against a catalogue of operations for two providers.
+
+# Open Issues {#open}
+
+- Restricting a brokered authorization to some instances of the logical client, for example by attester, by tenant, or by a condition the resource owner sets ({{any-instance}}).
+- An instance that starts a further instance of a different logical client. This document covers only instances of the client the brokered authorization was made to.
+- Client instances that authenticate with an assertion issued by their platform and not with a key of their own.
+- A broker as the enforcement point for authorization details types defined elsewhere, such as that of {{MISSION-RA}}.
+- How a client learns the operation names a broker resource uses.
+- The forwarding rules listed in {{forwarding}}, which are candidates for a companion document.
+- Upstream resources that answer with a challenge for stronger authentication or for interactive consent.
+- Evidence of each request sent upstream that a party other than the broker can check.
+- Operation of the broker and its authorization server by separate parties.
+
+--- back
+
+# Acknowledgments
+{:numbered="false"}
+
+The final hop to a bearer-only third-party API was a scenario in the WIMSE work at the IETF 127 Hackathon.
