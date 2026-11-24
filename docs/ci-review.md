@@ -28,22 +28,28 @@ actual completion and the exact reviewed commit in the bot summary; a reaction
 alone is acknowledgment. Use `@codex review` for one manual request when needed,
 not repeated requests for unchanged diffs.
 
-Repository-specific `AGENTS.md` review rules are a separate protected-file change
-and are not installed by this PR. Native review activation and current-head review
-must be verified before describing this repository as migrated or disabling any
-existing reviewer. This PR does not alter required checks, approval policy or
-GitHub Apps; CI execution is distinct from merge-policy enforcement.
+The owner-approved repository review rules are in root `AGENTS.md`, introduced
+by PR #28. Automatic triggering must be verified on a current eligible PR after
+the owner's settings correction; the earlier manual review is not automatic
+evidence. Keep CodeRabbit operational until that acceptance succeeds. No required
+checks, approval policies or GitHub Apps are changed by this operating guide;
+CI execution is distinct from merge-policy enforcement.
 
 Local fallback, after checking `codex login status` reports ChatGPT authentication:
 
 ```sh
 git fetch origin refs/heads/main:refs/remotes/origin/main &&
-  codex -s read-only -a never -c forced_login_method='"chatgpt"' review --base origin/main
-codex -s read-only -a never -c forced_login_method='"chatgpt"' review --uncommitted
+  env -u OPENAI_API_KEY -u CODEX_API_KEY codex -s read-only -a never \
+    exec --ignore-user-config --ephemeral -c forced_login_method='"chatgpt"' \
+    -c 'shell_environment_policy.inherit="none"' review --base origin/main
 ```
 
 Inspect untracked files before local review. Never expose credentials or private
-correspondence, export subscription sessions to CI, buy credits automatically or
+correspondence. For inspected uncommitted work, replace `review --base origin/main`
+with `review --uncommitted`; the SDK's public
+[review runbook](https://github.com/cred-ninja/sdk/blob/main/docs/codex-reviews.md)
+covers guarded PR checkouts and deeper security review. Never export subscription
+sessions to CI, buy credits automatically or
 switch silently to API billing. Native GitHub reviews and local reviews consume
 their respective subscription allowances; wait for reset or use a human reviewer
 when constrained. Codex remains advisory, independent of deterministic CI.
