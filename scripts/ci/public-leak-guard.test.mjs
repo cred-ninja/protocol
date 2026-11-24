@@ -47,6 +47,13 @@ test('clean tracked source passes', () => fixture({ 'README.md': 'ordinary sourc
   assert.equal(run().status, 0);
 }));
 
+test('a literal dash file cannot consume later inventory records', () => fixture({ '-': '', 'reports/item.md': 'ordinary source' }, ({ run }) => {
+  assert.notEqual(run().status, 0);
+}));
+test('a literal dash file is scanned as a file, not stdin', () => fixture({ '-': 'blocked-fixture' }, ({ run }) => {
+  assert.notEqual(run().status, 0);
+}));
+
 for (const path of ['docs/é.txt', 'docs/tab\tfile.txt', 'docs/line\nfile.txt', '--notes.md', '::error::fixture.md']) {
   test(`real Git inventory scans literal filename ${JSON.stringify(path)}`, () => fixture({ [path]: 'blocked-fixture' }, ({ run }) => {
     const result = run();

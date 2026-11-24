@@ -32,7 +32,7 @@ case "${1:-files}" in
         fail=1
         continue
       fi
-      if grep -qE -- "$PRIVATE_MARKERS" "$path"; then
+      if grep -qE -- "$PRIVATE_MARKERS" "./$path"; then
         printf 'Correspondence marker in path: %q\n' "$path"
         fail=1
       else
