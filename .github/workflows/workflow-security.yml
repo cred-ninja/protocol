@@ -1,0 +1,42 @@
+name: Workflow Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-security:
+    name: Workflow Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+      - name: Install exact workflow analyzers
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ci-tools"
+          GOBIN="$RUNNER_TEMP/ci-tools" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          python3 -m venv "$RUNNER_TEMP/zizmor"
+          "$RUNNER_TEMP/zizmor/bin/python" -m pip install 'zizmor==1.32.0'
+      - name: Check all workflows with ShellCheck support
+        run: |
+          command -v shellcheck >/dev/null
+          "$RUNNER_TEMP/ci-tools/actionlint" -color
+      - name: Audit workflow permissions and data flow
+        run: '"$RUNNER_TEMP/zizmor/bin/zizmor" --offline --format plain .github/workflows'
+      - name: Exercise public-source scanner failure boundaries
+        run: node --test scripts/ci/*.test.mjs
