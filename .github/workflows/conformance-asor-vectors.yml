@@ -3,6 +3,10 @@ name: conformance / draft-asor vectors
 permissions:
   contents: read
 
+concurrency:
+  group: asor-vectors-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -24,17 +28,21 @@ on:
 
 jobs:
   vectors:
+    name: vectors
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           path: protocol
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           repository: cred-ninja/sdk
           ref: ${{ github.event.inputs.sdk_ref || 'main' }}
           path: sdk
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
       - name: Install sdk dependencies
@@ -51,7 +59,7 @@ jobs:
           npm run build --workspace=packages/oauth
       - name: Install runner deps
         working-directory: protocol/conformance/asor-delegation-chain
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Record sdk commit under test
         working-directory: sdk
         run: |
@@ -66,7 +74,7 @@ jobs:
           npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps
           npx tsx run.ts --sdk "$GITHUB_WORKSPACE/sdk" --allow-gaps --json > "run-sdk-${SDK_SHA}.json"
       - name: Retain run output (sdk commit in the file name)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: asor-vectors-sdk-${{ env.SDK_SHA }}
           path: protocol/conformance/asor-delegation-chain/run-sdk-*.json
